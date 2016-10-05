@@ -26,14 +26,14 @@ GET            /template-instances/:id/permissions        controllers.TemplateIn
 PUT            /template-instances/:id/permissions        controllers.TemplateInstanceController.updateTemplateInstancePermissions(id: String)
 
 # Groups
-#POST           /groups                      controllers.GroupController.createGroup()
+POST           /groups                                    controllers.GroupController.createGroup()
 GET            /groups                                    controllers.GroupController.findGroups()
-#GET            /groups/:id                  controllers.GroupController.findGroup(id: String)
-#PATCH          /groups/:id                  controllers.GroupController.patchGroup(id: String)
-#PUT            /groups/:id                  controllers.GroupController.updateGroup(id: String)
-#DELETE         /groups/:id                  controllers.GroupController.deleteGroup(id: String)
-#GET            /groups/:id/members          controllers.GroupController.getGroupMembers(id: String)
-#PUT            /groups/:id/members          controllers.GroupController.updateGroupMembers(id: String)
+GET            /groups/:id                                controllers.GroupController.findGroup(id: String)
+PATCH          /groups/:id                                controllers.GroupController.patchGroup(id: String)
+PUT            /groups/:id                                controllers.GroupController.updateGroup(id: String)
+DELETE         /groups/:id                                controllers.GroupController.deleteGroup(id: String)
+GET            /groups/:id/members                        controllers.GroupController.getGroupMembers(id: String)
+PUT            /groups/:id/members                        controllers.GroupController.updateGroupMembers(id: String)
 
 GET            /accessible-node-ids                       controllers.PermissionController.accessibleNodeIds()
 
