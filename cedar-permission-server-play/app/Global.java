@@ -1,4 +1,8 @@
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.ConfigFactory;
+import org.metadatacenter.rest.exception.CedarAssertionException;
+import org.metadatacenter.server.play.AbstractCedarController;
 import org.metadatacenter.server.security.*;
 import play.*;
 import play.libs.F.Promise;
@@ -49,7 +53,14 @@ public class Global extends GlobalSettings {
 
     @Override
     public Promise<Result> call(Http.Context ctx) throws java.lang.Throwable {
-      Promise<Result> result = this.delegate.call(ctx);
+      Promise<Result> result;
+      try {
+        result = this.delegate.call(ctx);
+      } catch (CedarAssertionException cae) {
+        result = Promise.<Result>pure(status(cae.getCode(), cae.asJson()));
+      } catch (Exception ex) {
+        result = Promise.<Result>pure(internalServerError(CedarAssertionException.asJson(ex)));
+      }
       Http.Response response = ctx.response();
       response.setHeader("Access-Control-Allow-Origin", "*");
       return result;

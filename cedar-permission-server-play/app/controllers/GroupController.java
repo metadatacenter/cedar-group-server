@@ -4,54 +4,37 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.metadatacenter.constant.HttpConstants;
 import org.metadatacenter.model.folderserver.CedarFSGroup;
 import org.metadatacenter.model.response.FSGroupListResponse;
-import org.metadatacenter.rest.*;
+import org.metadatacenter.rest.ICedarParameter;
+import org.metadatacenter.rest.ICedarRequestBody;
+import org.metadatacenter.rest.assertion.GenericAssertions;
 import org.metadatacenter.rest.bridge.CedarDataServices;
+import org.metadatacenter.rest.context.CedarRequestContextFactory;
+import org.metadatacenter.rest.context.ICedarRequestContext;
+import org.metadatacenter.rest.exception.CedarAssertionException;
 import org.metadatacenter.server.neo4j.Neo4JUserSession;
-import org.metadatacenter.server.security.Authorization;
-import org.metadatacenter.server.security.CedarAuthFromRequestFactory;
-import org.metadatacenter.server.security.exception.CedarAccessException;
-import org.metadatacenter.server.security.model.IAuthRequest;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
-import org.metadatacenter.server.security.model.user.CedarUser;
 import org.metadatacenter.util.json.JsonMapper;
 import play.mvc.Result;
-import utils.DataServices;
 
 import java.util.List;
 
 public class GroupController extends AbstractPermissionServerController {
 
 
-  public static Result findGroups() {
-    IAuthRequest frontendRequest = null;
-    CedarUser currentUser = null;
-    try {
-      frontendRequest = CedarAuthFromRequestFactory.fromRequest(request());
-      currentUser = Authorization.getUserAndEnsurePermission(frontendRequest, CedarPermission.LOGGED_IN);
-    } catch (CedarAccessException e) {
-      play.Logger.error("Access Error while reading the groups", e);
-      return forbiddenWithError(e);
-    }
+  public static Result findGroups() throws CedarAssertionException {
+    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    c.must(c.user()).be(GenericAssertions.loggedIn);
 
-    try {
-      Neo4JUserSession neoSession = DataServices.getInstance().getNeo4JSession(currentUser);
+    Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
+    List<CedarFSGroup> groups = neoSession.findGroups();
 
-      List<CedarFSGroup> groups = neoSession.findGroups();
-
-      FSGroupListResponse r = new FSGroupListResponse();
-
-      r.setGroups(groups);
-
-      JsonNode resp = JsonMapper.MAPPER.valueToTree(r);
-      return ok(resp);
-
-    } catch (Exception e) {
-      play.Logger.error("Error while listing groups", e);
-      return internalServerErrorWithError(e);
-    }
+    FSGroupListResponse r = new FSGroupListResponse();
+    r.setGroups(groups);
+    JsonNode resp = JsonMapper.MAPPER.valueToTree(r);
+    return ok(resp);
   }
 
-  public static Result createGroup() {
+  public static Result createGroup() throws CedarAssertionException {
     ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
     c.must(c.user()).be(GenericAssertions.loggedIn);
@@ -79,7 +62,7 @@ public class GroupController extends AbstractPermissionServerController {
     return created(createdGroup);
   }
 
-  public static Result findGroup(String id) {
+  public static Result findGroup(String id) throws CedarAssertionException {
     ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
     c.must(c.user()).be(GenericAssertions.loggedIn);

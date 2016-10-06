@@ -9,6 +9,7 @@ import org.metadatacenter.server.security.model.user.CedarUser;
 import org.metadatacenter.server.service.UserService;
 import org.metadatacenter.server.service.mongodb.UserServiceMongoDB;
 
+// TODO: remove this class from this module
 public class DataServices {
 
   private static DataServices instance = new DataServices();

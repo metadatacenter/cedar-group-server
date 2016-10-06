@@ -1,4 +1,4 @@
-package org.metadatacenter.rest;
+package org.metadatacenter.rest.context;
 
 import play.mvc.Http;
 

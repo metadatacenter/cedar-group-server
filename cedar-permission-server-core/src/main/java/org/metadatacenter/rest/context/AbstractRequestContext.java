@@ -1,17 +1,31 @@
-package org.metadatacenter.rest;
+package org.metadatacenter.rest.context;
 
+import org.metadatacenter.rest.*;
+import org.metadatacenter.rest.assertion.noun.ICedarUser;
+import org.metadatacenter.rest.assertion.assertiontarget.CedarAssertionTarget;
+import org.metadatacenter.rest.assertion.assertiontarget.ICedarAssertionTarget;
 import org.metadatacenter.rest.operation.CedarOperationBuilder;
 import org.metadatacenter.server.security.model.user.CedarUser;
 
 public abstract class AbstractRequestContext implements ICedarRequestContext {
+
+  protected CedarUser currentUser;
+  protected ICedarUser user;
+
+  protected void initialize() {
+    initializeLocal();
+  }
+
+  abstract void initializeLocal();
+
   @Override
   public ICedarUser user() {
-    return null;
+    return user;
   }
 
   @Override
   public ICedarAssertionTarget must(ICedarAssertionNoun target) {
-    return null;
+    return new CedarAssertionTarget(this, target);
   }
 
   @Override
@@ -31,6 +45,6 @@ public abstract class AbstractRequestContext implements ICedarRequestContext {
 
   @Override
   public CedarUser getCedarUser() {
-    return null;
+    return currentUser;
   }
 }
