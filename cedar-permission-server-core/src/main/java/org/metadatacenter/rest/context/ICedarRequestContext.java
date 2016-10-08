@@ -1,9 +1,12 @@
 package org.metadatacenter.rest.context;
 
-import org.metadatacenter.rest.*;
+import org.metadatacenter.rest.ICedarAssertionNoun;
+import org.metadatacenter.rest.assertion.assertiontarget.IAssertionNounTargetFuture;
+import org.metadatacenter.rest.assertion.assertiontarget.IAssertionNounTargetPresent;
+import org.metadatacenter.rest.assertion.assertiontarget.IAssertionPOJOTargetFuture;
+import org.metadatacenter.rest.assertion.assertiontarget.IAssertionPOJOTargetPresent;
+import org.metadatacenter.rest.assertion.noun.ICedarRequest;
 import org.metadatacenter.rest.assertion.noun.ICedarUser;
-import org.metadatacenter.rest.assertion.assertiontarget.ICedarAssertionTarget;
-import org.metadatacenter.rest.operation.CedarOperationBuilder;
 import org.metadatacenter.server.security.model.IAuthRequest;
 import org.metadatacenter.server.security.model.user.CedarUser;
 
@@ -15,13 +18,13 @@ public interface ICedarRequestContext {
 
   ICedarUser user();
 
-  ICedarAssertionTarget must(ICedarAssertionNoun target);
+  IAssertionNounTargetFuture should(ICedarAssertionNoun... nouns);
 
-  ICedarAssertionParameterTarget must(ICedarParameter... params);
+  IAssertionPOJOTargetFuture should(Object... objects);
 
-  ICedarAssertionObjectTarget must(Object object);
+  IAssertionNounTargetPresent must(ICedarAssertionNoun... nouns);
 
-  CedarOperationBuilder operation();
+  IAssertionPOJOTargetPresent must(Object... objects);
 
   CedarUser getCedarUser();
 }

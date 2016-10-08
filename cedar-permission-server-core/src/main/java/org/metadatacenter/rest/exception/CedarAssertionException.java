@@ -4,63 +4,52 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.metadatacenter.util.json.JsonMapper;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class CedarAssertionException extends Exception {
 
-  private static int HTTP_UNAUTHORIZED = 401;
-  private static int HTTP_FORBIDDEN = 403;
-  private static int HTTP_INTERNAL_SERVER_ERROR = 500;
+  public static final String ERROR_SUB_TYPE = "errorSubType";
+  public static final String ERROR_CODE = "errorCode";
+  public static final String SUGGESTED_ACTION = "suggestedAction";
+  public static final String ERROR_PARAMS = "errorParams";
+  public static final String ERROR_SOURCE = "errorSource";
+  public static final String ERROR_TYPE = "errorType";
+  public static final String MESSAGE = "message";
+  public static final String LOCALIZED_MESSAGE = "localizedMessage";
+  public static final String STRING = "string";
+  public static final String STACK_TRACE = "stackTrace";
 
-  private int code;
-  private String errorSubType = "other";
-  private String suggestedAction = "none";
-  private String errorCode = null;
-  private Map<String, Object> params;
+  private CedarAssertionResult result;
 
-  public CedarAssertionException(String message) {
-    super(message);
-    code = HTTP_INTERNAL_SERVER_ERROR;
-    params = new HashMap<>();
-  }
-
-  public CedarAssertionException internalServerError() {
-    code = HTTP_INTERNAL_SERVER_ERROR;
-    return this;
-  }
-
-  public CedarAssertionException forbidden() {
-    code = HTTP_FORBIDDEN;
-    return this;
-  }
-
-  public CedarAssertionException unauthorized() {
-    code = HTTP_UNAUTHORIZED;
-    return this;
+  public CedarAssertionException(CedarAssertionResult result) {
+    super(result.getMessage());
+    this.result = result;
   }
 
   public int getCode() {
-    return code;
+    return result.getCode();
   }
 
   public ObjectNode asJson() {
     ObjectNode objectNode = JsonMapper.MAPPER.createObjectNode();
     addExceptionData(objectNode, this, "cedarAssertionFramework");
 
-    objectNode.put("errorSubType", errorSubType);
-    objectNode.put("errorCode", errorCode);
-    objectNode.put("suggestedAction", suggestedAction);
+    objectNode.put(ERROR_SUB_TYPE, result.getErrorSubType());
+    objectNode.put(ERROR_CODE, result.getErrorCode());
+    objectNode.put(SUGGESTED_ACTION, result.getSuggestedAction());
 
     ObjectNode errorParams = JsonMapper.MAPPER.createObjectNode();
-    for (String key : params.keySet()) {
-      errorParams.set(key, JsonMapper.MAPPER.valueToTree(params.get(key)));
+    for (String key : result.getParameters().keySet()) {
+      errorParams.set(key, JsonMapper.MAPPER.valueToTree(result.getParameters().get(key)));
     }
-    objectNode.set("errorParams", errorParams);
+    objectNode.set(ERROR_PARAMS, errorParams);
 
     return objectNode;
   }
 
+  public static ObjectNode asJson(String errorSource, String errorMessage) {
+    ObjectNode objectNode = JsonMapper.MAPPER.createObjectNode();
+    addStringData(objectNode, errorSource, errorMessage);
+    return objectNode;
+  }
 
   public static ObjectNode asJson(Exception ex) {
     ObjectNode objectNode = JsonMapper.MAPPER.createObjectNode();
@@ -69,17 +58,24 @@ public class CedarAssertionException extends Exception {
   }
 
   private static void addExceptionData(ObjectNode objectNode, Exception ex, String errorSource) {
-    objectNode.put("errorSource", errorSource);
-    objectNode.put("errorType", "exception");
-    objectNode.put("message", ex.getMessage());
-    objectNode.put("localizedMessage", ex.getLocalizedMessage());
-    objectNode.put("string", ex.toString());
+    objectNode.put(ERROR_SOURCE, errorSource);
+    objectNode.put(ERROR_TYPE, "exception");
+    objectNode.put(MESSAGE, ex.getMessage());
+    objectNode.put(LOCALIZED_MESSAGE, ex.getLocalizedMessage());
+    objectNode.put(STRING, ex.toString());
 
-    ArrayNode jsonST = objectNode.putArray("stackTrace");
+    ArrayNode jsonST = objectNode.putArray(STACK_TRACE);
     for (StackTraceElement ste : ex.getStackTrace()) {
       jsonST.add(ste.toString());
     }
   }
 
+  private static void addStringData(ObjectNode objectNode, String errorSource, String errorMessage) {
+    objectNode.put(ERROR_SOURCE, errorSource);
+    objectNode.put(ERROR_TYPE, "error");
+    objectNode.put(MESSAGE, errorMessage);
+    objectNode.put(LOCALIZED_MESSAGE, errorMessage);
+    objectNode.put(STRING, errorMessage);
+  }
 
 }

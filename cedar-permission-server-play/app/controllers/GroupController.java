@@ -4,13 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.metadatacenter.constant.HttpConstants;
 import org.metadatacenter.model.folderserver.CedarFSGroup;
 import org.metadatacenter.model.response.FSGroupListResponse;
-import org.metadatacenter.rest.ICedarParameter;
-import org.metadatacenter.rest.ICedarRequestBody;
+import org.metadatacenter.rest.assertion.noun.ICedarParameter;
+import org.metadatacenter.rest.assertion.noun.ICedarRequestBody;
 import org.metadatacenter.rest.assertion.GenericAssertions;
 import org.metadatacenter.rest.bridge.CedarDataServices;
 import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.rest.context.ICedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionException;
+import org.metadatacenter.rest.operation.CedarOperations;
 import org.metadatacenter.server.neo4j.Neo4JUserSession;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 import org.metadatacenter.util.json.JsonMapper;
@@ -40,21 +41,24 @@ public class GroupController extends AbstractPermissionServerController {
     c.must(c.user()).be(GenericAssertions.loggedIn);
     c.must(c.user()).have(CedarPermission.GROUP_CREATE);
 
-    c.must(c.request()).be(GenericAssertions.jsonBody, GenericAssertions.nonEmpty);
+    c.must(c.request()).be(GenericAssertions.jsonBody);
     ICedarRequestBody requestBody = c.request().jsonBody();
 
     ICedarParameter groupName = requestBody.get("name");
     ICedarParameter groupDescription = requestBody.get("description");
-    c.must(groupName, groupDescription).allPresent();
+    c.should(groupName, groupDescription).be(GenericAssertions.isNotNull).otherwiseBadRequest();
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
 
     CedarFSGroup oldGroup = neoSession.findGroupByName(groupName.stringValue());
-    c.must(oldGroup).beNull(c.operation().lookup(CedarFSGroup.class, "name", groupName));
+    c.should(oldGroup).be(GenericAssertions.isNull).otherwiseBadRequest(
+        CedarOperations.lookup(CedarFSGroup.class, "name", groupName));
 
     CedarFSGroup newGroup = neoSession.createGroup(groupName.stringValue(), groupName.stringValue(),
         groupDescription.stringValue(), c.getCedarUser().getId());
-    c.must(newGroup).beNotNull(c.operation().create(CedarFSGroup.class, "name", groupName));
+    c.should(newGroup).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+        CedarOperations.create(CedarFSGroup.class, "name", groupName)
+    );
 
     JsonNode createdGroup = JsonMapper.MAPPER.valueToTree(newGroup);
     String absoluteUrl = routes.GroupController.findGroup(newGroup.getId()).absoluteURL(request());
@@ -71,10 +75,8 @@ public class GroupController extends AbstractPermissionServerController {
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
 
     CedarFSGroup group = neoSession.findGroupById(id);
-    //TODO : how do we differentiate between this benotnull + lookup, which should result in 404
-    // and the beNull + lookup  above, in create, which should result in illegal argument
-    // or the other beNotNull + create, whichshould result in internal server error.
-    c.must(group).beNotNull(c.operation().lookup(CedarFSGroup.class, "id", id));
+    c.should(group).be(GenericAssertions.isNotNull).otherwiseNotFound(CedarOperations.lookup(CedarFSGroup.class, "id",
+        id));
 
     JsonNode foundGroup = JsonMapper.MAPPER.valueToTree(group);
     return ok(foundGroup);

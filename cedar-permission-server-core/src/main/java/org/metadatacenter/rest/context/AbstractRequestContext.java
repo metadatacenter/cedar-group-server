@@ -1,16 +1,18 @@
 package org.metadatacenter.rest.context;
 
-import org.metadatacenter.rest.*;
+import org.metadatacenter.rest.ICedarAssertionNoun;
+import org.metadatacenter.rest.assertion.assertiontarget.*;
+import org.metadatacenter.rest.assertion.noun.ICedarRequest;
 import org.metadatacenter.rest.assertion.noun.ICedarUser;
-import org.metadatacenter.rest.assertion.assertiontarget.CedarAssertionTarget;
-import org.metadatacenter.rest.assertion.assertiontarget.ICedarAssertionTarget;
-import org.metadatacenter.rest.operation.CedarOperationBuilder;
+import org.metadatacenter.server.security.model.IAuthRequest;
 import org.metadatacenter.server.security.model.user.CedarUser;
 
 public abstract class AbstractRequestContext implements ICedarRequestContext {
 
   protected CedarUser currentUser;
   protected ICedarUser user;
+  protected ICedarRequest wrappedRequest;
+  protected IAuthRequest authRequest;
 
   protected void initialize() {
     initializeLocal();
@@ -24,27 +26,38 @@ public abstract class AbstractRequestContext implements ICedarRequestContext {
   }
 
   @Override
-  public ICedarAssertionTarget must(ICedarAssertionNoun target) {
-    return new CedarAssertionTarget(this, target);
+  public IAssertionNounTargetFuture should(ICedarAssertionNoun... targets) {
+    return new AssertionNounTargetFuture(this, targets);
   }
 
   @Override
-  public ICedarAssertionParameterTarget must(ICedarParameter... params) {
-    return null;
+  public IAssertionPOJOTargetFuture should(Object... targets) {
+    return new AssertionPOJOTargetFuture(this, targets);
   }
 
   @Override
-  public ICedarAssertionObjectTarget must(Object object) {
-    return null;
+  public IAssertionNounTargetPresent must(ICedarAssertionNoun... targets) {
+    return new AssertionNountTargetPresent(this, targets);
   }
 
   @Override
-  public CedarOperationBuilder operation() {
-    return null;
+  public IAssertionPOJOTargetPresent must(Object... targets) {
+    return new AssertionPOJOTargetPresent(this, targets);
   }
 
   @Override
   public CedarUser getCedarUser() {
     return currentUser;
   }
+
+  @Override
+  public ICedarRequest request() {
+    return wrappedRequest;
+  }
+
+  @Override
+  public IAuthRequest getAuthRequest() {
+    return authRequest;
+  }
+
 }

@@ -6,22 +6,28 @@ import org.metadatacenter.rest.context.ICedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionException;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 
-public class CedarAssertionTarget implements ICedarAssertionTarget {
+import java.util.Collection;
+import java.util.LinkedHashSet;
 
-  private ICedarAssertionNoun target;
+public class AssertionNountTargetPresent implements IAssertionNounTargetPresent {
+
+  private Collection<ICedarAssertionNoun> targets;
   private ICedarRequestContext requestContext;
 
-  public CedarAssertionTarget(ICedarRequestContext requestContext, ICedarAssertionNoun target) {
+  public AssertionNountTargetPresent(ICedarRequestContext requestContext, ICedarAssertionNoun... targets) {
     this.requestContext = requestContext;
-    this.target = target;
+    this.targets = new LinkedHashSet<>();
+    for (ICedarAssertionNoun target : targets) {
+      this.targets.add(target);
+    }
   }
 
   @Override
   public void be(ICedarAssertion... assertions) throws CedarAssertionException {
-    System.out.println("check assertions on: " + target);
-    for (ICedarAssertion assertion : assertions) {
-      System.out.println("Check this:" + assertion);
-      assertion.check(requestContext, target);
+    for (ICedarAssertionNoun target : targets) {
+      for (ICedarAssertion assertion : assertions) {
+        assertion.check(requestContext, target);
+      }
     }
   }
 

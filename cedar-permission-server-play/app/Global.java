@@ -5,6 +5,7 @@ import org.metadatacenter.rest.exception.CedarAssertionException;
 import org.metadatacenter.server.play.AbstractCedarController;
 import org.metadatacenter.server.security.*;
 import play.*;
+import play.libs.F;
 import play.libs.F.Promise;
 import play.mvc.Action;
 import play.mvc.Http;
@@ -35,14 +36,15 @@ public class Global extends GlobalSettings {
   // If the framework doesn’t find an action method for a request, the onHandlerNotFound operation will be called:
   @Override
   public Promise<Result> onHandlerNotFound(Http.RequestHeader request) {
-    return Promise.<Result>pure(notFound(request.uri()));
+    return Promise.<Result>pure(notFound(CedarAssertionException.asJson("play2Framework", "Missing route:" +
+        request.uri())));
   }
 
   // The onBadRequest operation will be called if a route was found, but it was not possible to bind the request
   // parameters
   @Override
   public Promise<Result> onBadRequest(Http.RequestHeader request, String error) {
-    return Promise.<Result>pure(badRequest(error));
+    return Promise.<Result>pure(badRequest(CedarAssertionException.asJson("play2Framework", error)));
   }
 
   /* For CORS */
@@ -78,9 +80,9 @@ public class Global extends GlobalSettings {
     return new ActionWrapper(super.onRequest(request, method));
   }
 
-
   @Override
   public void onStart(Application application) {
+    //TODO get rid of this Data services instance, and the class altogether
     // init data services
     DataServices.getInstance();
     // init keycloak deployment
