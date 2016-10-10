@@ -2,6 +2,7 @@ package org.metadatacenter.rest.exception;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.metadatacenter.rest.ICedarOperationDescriptor;
 import org.metadatacenter.util.json.JsonMapper;
 
 public class CedarAssertionException extends Exception {
@@ -16,12 +17,15 @@ public class CedarAssertionException extends Exception {
   public static final String LOCALIZED_MESSAGE = "localizedMessage";
   public static final String STRING = "string";
   public static final String STACK_TRACE = "stackTrace";
+  public static final String OPERATION = "operation";
 
   private CedarAssertionResult result;
+  private ICedarOperationDescriptor operation;
 
-  public CedarAssertionException(CedarAssertionResult result) {
+  public CedarAssertionException(CedarAssertionResult result, ICedarOperationDescriptor operation) {
     super(result.getMessage());
     this.result = result;
+    this.operation = operation;
   }
 
   public int getCode() {
@@ -31,6 +35,7 @@ public class CedarAssertionException extends Exception {
   public ObjectNode asJson() {
     ObjectNode objectNode = JsonMapper.MAPPER.createObjectNode();
     addExceptionData(objectNode, this, "cedarAssertionFramework");
+    addOperationData(objectNode, this.operation);
 
     objectNode.put(ERROR_SUB_TYPE, result.getErrorSubType());
     objectNode.put(ERROR_CODE, result.getErrorCode());
@@ -76,6 +81,12 @@ public class CedarAssertionException extends Exception {
     objectNode.put(MESSAGE, errorMessage);
     objectNode.put(LOCALIZED_MESSAGE, errorMessage);
     objectNode.put(STRING, errorMessage);
+  }
+
+  private static void addOperationData(ObjectNode objectNode, ICedarOperationDescriptor operation) {
+    if (operation != null) {
+      objectNode.set(OPERATION, operation.asJson());
+    }
   }
 
 }

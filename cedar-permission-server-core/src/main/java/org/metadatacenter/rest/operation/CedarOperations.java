@@ -9,15 +9,15 @@ public final class CedarOperations {
 
   public static CedarLookupOperation lookup(Class clazz, String lookupAttributeName, ICedarParameter
       lookupAttributeValue) {
-    return new CedarLookupOperation();
+    return new CedarLookupOperation(clazz, lookupAttributeName, lookupAttributeValue.stringValue());
   }
 
   public static CedarLookupOperation lookup(Class clazz, String lookupAttributeName, String lookupAttributeValue) {
-    return new CedarLookupOperation();
+    return new CedarLookupOperation(clazz, lookupAttributeName, lookupAttributeValue);
   }
 
   public static CedarCreateOperation create(Class clazz, String primaryIdAttributeName, ICedarParameter
       primaryIdAttributeValue) {
-    return new CedarCreateOperation();
+    return new CedarCreateOperation(clazz, primaryIdAttributeName, primaryIdAttributeValue);
   }
 }

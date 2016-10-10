@@ -17,25 +17,26 @@ public abstract class AssertionTargetFuture<T> implements IAssertionTargetFuture
 
   @Override
   public void otherwiseBadRequest() throws CedarAssertionException {
-    buildAndThrowAssertionExceptionIfNeeded(getFirstAssertionError(), null,
+    buildAndThrowAssertionExceptionIfNeeded(getFirstAssertionError(), null, null,
         CedarAssertionResult.HTTP_BAD_REQUEST);
   }
 
   @Override
-  public void otherwiseBadRequest(ICedarOperationDescriptor operation) throws CedarAssertionException {
-    buildAndThrowAssertionExceptionIfNeeded(getFirstAssertionError(), operation,
+  public void otherwiseBadRequest(ICedarOperationDescriptor operation, String message) throws CedarAssertionException {
+    buildAndThrowAssertionExceptionIfNeeded(getFirstAssertionError(), operation, message,
         CedarAssertionResult.HTTP_BAD_REQUEST);
   }
 
   @Override
-  public void otherwiseInternalServerError(ICedarOperationDescriptor operation) throws CedarAssertionException {
-    buildAndThrowAssertionExceptionIfNeeded(getFirstAssertionError(), operation,
+  public void otherwiseInternalServerError(ICedarOperationDescriptor operation, String message) throws
+      CedarAssertionException {
+    buildAndThrowAssertionExceptionIfNeeded(getFirstAssertionError(), operation, message,
         CedarAssertionResult.HTTP_INTERNAL_SERVER_ERROR);
   }
 
   @Override
-  public void otherwiseNotFound(ICedarOperationDescriptor operation) throws CedarAssertionException {
-    buildAndThrowAssertionExceptionIfNeeded(getFirstAssertionError(), operation,
+  public void otherwiseNotFound(ICedarOperationDescriptor operation, String message) throws CedarAssertionException {
+    buildAndThrowAssertionExceptionIfNeeded(getFirstAssertionError(), operation, message,
         CedarAssertionResult.HTTP_NOT_FOUND);
   }
 
@@ -58,17 +59,14 @@ public abstract class AssertionTargetFuture<T> implements IAssertionTargetFuture
   }
 
   private void buildAndThrowAssertionExceptionIfNeeded(CedarAssertionResult assertionResult,
-                                                       ICedarOperationDescriptor operation, int errorCode) throws
-      CedarAssertionException {
-    System.out.println("Build ex and throw");
+                                                       ICedarOperationDescriptor operation, String message,
+                                                       int errorCode) throws CedarAssertionException {
     if (assertionResult != null) {
-      System.out.println("assertion result:" + assertionResult);
       assertionResult.setCode(errorCode);
-      CedarAssertionException ex = new CedarAssertionException(assertionResult);
-      if (operation != null) {
-        System.out.println("op:" + operation);
-        System.out.println(" **** * HERE add Op Description to EX" + operation);
+      if (message != null) {
+        assertionResult.setMessage(message);
       }
+      CedarAssertionException ex = new CedarAssertionException(assertionResult, operation);
       throw ex;
     }
   }

@@ -52,12 +52,14 @@ public class GroupController extends AbstractPermissionServerController {
 
     CedarFSGroup oldGroup = neoSession.findGroupByName(groupName.stringValue());
     c.should(oldGroup).be(GenericAssertions.isNull).otherwiseBadRequest(
-        CedarOperations.lookup(CedarFSGroup.class, "name", groupName));
+        CedarOperations.lookup(CedarFSGroup.class, "name", groupName),
+        "There is a group with the same name present in the system. Group names must be unique!");
 
     CedarFSGroup newGroup = neoSession.createGroup(groupName.stringValue(), groupName.stringValue(),
-        groupDescription.stringValue(), c.getCedarUser().getId());
+        groupDescription.stringValue());
     c.should(newGroup).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
-        CedarOperations.create(CedarFSGroup.class, "name", groupName)
+        CedarOperations.create(CedarFSGroup.class, "name", groupName),
+        "There was an error while creating the group!"
     );
 
     JsonNode createdGroup = JsonMapper.MAPPER.valueToTree(newGroup);
@@ -75,9 +77,10 @@ public class GroupController extends AbstractPermissionServerController {
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
 
     CedarFSGroup group = neoSession.findGroupById(id);
-    c.should(group).be(GenericAssertions.isNotNull).otherwiseNotFound(CedarOperations.lookup(CedarFSGroup.class, "id",
-        id));
-
+    c.should(group).be(GenericAssertions.isNotNull).otherwiseNotFound(
+        CedarOperations.lookup(CedarFSGroup.class, "id", id),
+        "The group can not be found by id!");
+    
     JsonNode foundGroup = JsonMapper.MAPPER.valueToTree(group);
     return ok(foundGroup);
   }

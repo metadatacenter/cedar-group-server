@@ -7,9 +7,9 @@ public interface IAssertionTargetFuture {
 
   void otherwiseBadRequest() throws CedarAssertionException;
 
-  void otherwiseBadRequest(ICedarOperationDescriptor operation) throws CedarAssertionException;
+  void otherwiseBadRequest(ICedarOperationDescriptor operation, String message) throws CedarAssertionException;
 
-  void otherwiseInternalServerError(ICedarOperationDescriptor operation) throws CedarAssertionException;
+  void otherwiseInternalServerError(ICedarOperationDescriptor operation, String message) throws CedarAssertionException;
 
-  void otherwiseNotFound(ICedarOperationDescriptor operation) throws CedarAssertionException;
+  void otherwiseNotFound(ICedarOperationDescriptor operation, String message) throws CedarAssertionException;
 }

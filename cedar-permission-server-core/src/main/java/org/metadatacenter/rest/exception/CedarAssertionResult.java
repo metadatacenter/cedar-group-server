@@ -58,6 +58,10 @@ public class CedarAssertionResult {
     this.code = code;
   }
 
+  public void setMessage(String message) {
+    this.message = message;
+  }
+
   public String getMessage() {
     return message;
   }
