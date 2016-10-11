@@ -20,4 +20,10 @@ public final class CedarOperations {
       primaryIdAttributeValue) {
     return new CedarCreateOperation(clazz, primaryIdAttributeName, primaryIdAttributeValue);
   }
+
+  public static CedarUpdateOperation update(Class clazz, String lookupAttributeName, String lookupAttributeValue) {
+    return new CedarUpdateOperation(clazz, lookupAttributeName, lookupAttributeValue);
+  }
+
 }
+

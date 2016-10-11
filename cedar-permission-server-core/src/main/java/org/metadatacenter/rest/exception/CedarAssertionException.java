@@ -22,6 +22,10 @@ public class CedarAssertionException extends Exception {
   private CedarAssertionResult result;
   private ICedarOperationDescriptor operation;
 
+  public CedarAssertionException(CedarAssertionResult result) {
+    this(result, null);
+  }
+
   public CedarAssertionException(CedarAssertionResult result, ICedarOperationDescriptor operation) {
     super(result.getMessage());
     this.result = result;

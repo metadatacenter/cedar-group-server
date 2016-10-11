@@ -37,7 +37,7 @@ public abstract class AbstractRequestContext implements ICedarRequestContext {
 
   @Override
   public IAssertionNounTargetPresent must(ICedarAssertionNoun... targets) {
-    return new AssertionNountTargetPresent(this, targets);
+    return new AssertionNounTargetPresent(this, targets);
   }
 
   @Override

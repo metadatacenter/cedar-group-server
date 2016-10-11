@@ -4,6 +4,8 @@ import org.metadatacenter.rest.ICedarAssertionNoun;
 
 public interface ICedarRequest extends ICedarAssertionNoun {
 
-  ICedarRequestBody jsonBody();
+  ICedarRequestBody getJsonBody();
+
+  String getContentType();
 
 }

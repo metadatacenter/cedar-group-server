@@ -3,6 +3,7 @@ package org.metadatacenter.rest.assertion.assertiontarget;
 import org.metadatacenter.rest.assertion.ICedarAssertion;
 import org.metadatacenter.rest.context.ICedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionException;
+import org.metadatacenter.rest.exception.CedarAssertionResult;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -24,7 +25,10 @@ public class AssertionPOJOTargetPresent implements IAssertionPOJOTargetPresent {
   public void be(ICedarAssertion... assertions) throws CedarAssertionException {
     for (Object target : targets) {
       for (ICedarAssertion assertion : assertions) {
-        assertion.check(requestContext, target);
+        CedarAssertionResult result = assertion.check(requestContext, target);
+        if (result != null) {
+          throw new CedarAssertionException(result);
+        }
       }
     }
   }

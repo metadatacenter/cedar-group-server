@@ -14,13 +14,21 @@ public class PlayRequest extends RequestNoun {
   }
 
   @Override
-  public ICedarRequestBody jsonBody() {
+  public ICedarRequestBody getJsonBody() {
     JsonNode jsonBodyNode = null;
     if (nativeRequest != null && nativeRequest.body() != null) {
       jsonBodyNode = nativeRequest.body().asJson();
       if (jsonBodyNode != null) {
         return new PlayRequestJsonBody(jsonBodyNode);
       }
+    }
+    return null;
+  }
+
+  @Override
+  public String getContentType() {
+    if (nativeRequest != null ) {
+      return nativeRequest.getHeader("Content-Type");
     }
     return null;
   }

@@ -1,6 +1,5 @@
 package controllers;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.metadatacenter.constant.HttpConstants;
 import org.metadatacenter.model.folderserver.CedarFSGroup;
 import org.metadatacenter.model.response.FSGroupListResponse;
@@ -11,13 +10,16 @@ import org.metadatacenter.rest.bridge.CedarDataServices;
 import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.rest.context.ICedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionException;
+import org.metadatacenter.rest.exception.CedarAssertionResult;
 import org.metadatacenter.rest.operation.CedarOperations;
+import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.neo4j.Neo4JUserSession;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
-import org.metadatacenter.util.json.JsonMapper;
 import play.mvc.Result;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GroupController extends AbstractPermissionServerController {
 
@@ -31,8 +33,7 @@ public class GroupController extends AbstractPermissionServerController {
 
     FSGroupListResponse r = new FSGroupListResponse();
     r.setGroups(groups);
-    JsonNode resp = JsonMapper.MAPPER.valueToTree(r);
-    return ok(resp);
+    return ok(asJson(r));
   }
 
   public static Result createGroup() throws CedarAssertionException {
@@ -42,7 +43,7 @@ public class GroupController extends AbstractPermissionServerController {
     c.must(c.user()).have(CedarPermission.GROUP_CREATE);
 
     c.must(c.request()).be(GenericAssertions.jsonBody);
-    ICedarRequestBody requestBody = c.request().jsonBody();
+    ICedarRequestBody requestBody = c.request().getJsonBody();
 
     ICedarParameter groupName = requestBody.get("name");
     ICedarParameter groupDescription = requestBody.get("description");
@@ -62,10 +63,9 @@ public class GroupController extends AbstractPermissionServerController {
         "There was an error while creating the group!"
     );
 
-    JsonNode createdGroup = JsonMapper.MAPPER.valueToTree(newGroup);
     String absoluteUrl = routes.GroupController.findGroup(newGroup.getId()).absoluteURL(request());
     response().setHeader(HttpConstants.HTTP_HEADER_LOCATION, absoluteUrl);
-    return created(createdGroup);
+    return created(asJson(newGroup));
   }
 
   public static Result findGroup(String id) throws CedarAssertionException {
@@ -80,17 +80,119 @@ public class GroupController extends AbstractPermissionServerController {
     c.should(group).be(GenericAssertions.isNotNull).otherwiseNotFound(
         CedarOperations.lookup(CedarFSGroup.class, "id", id),
         "The group can not be found by id!");
-    
-    JsonNode foundGroup = JsonMapper.MAPPER.valueToTree(group);
-    return ok(foundGroup);
+
+    return ok(asJson(group));
   }
 
-  public static Result patchGroup(String id) {
-    return play.mvc.Results.TODO;
+  public static Result updateGroup(String id) throws CedarAssertionException {
+    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+
+    c.must(c.user()).be(GenericAssertions.loggedIn);
+    c.must(c.user()).have(CedarPermission.GROUP_UPDATE);
+
+    c.must(c.request()).be(GenericAssertions.jsonBody);
+    ICedarRequestBody requestBody = c.request().getJsonBody();
+
+    Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
+    CedarFSGroup existingGroup = findNonSpecialGroupById(c, neoSession, id);
+
+    ICedarParameter groupName = requestBody.get("name");
+    ICedarParameter groupDescription = requestBody.get("description");
+    c.should(groupName, groupDescription).be(GenericAssertions.isNotNull).otherwiseBadRequest();
+
+    // check if the new name is unique
+    CedarFSGroup otherGroup = neoSession.findGroupByName(groupName.stringValue());
+    checkUniqueness(otherGroup, existingGroup);
+
+    Map<String, String> updateFields = new HashMap<>();
+    updateFields.put(Neo4JFields.NAME, groupName.stringValue());
+    updateFields.put(Neo4JFields.DISPLAY_NAME, groupName.stringValue());
+    updateFields.put(Neo4JFields.DESCRIPTION, groupDescription.stringValue());
+    CedarFSGroup updatedGroup = neoSession.updateGroupById(id, updateFields);
+
+    c.should(updatedGroup).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+        CedarOperations.update(CedarFSGroup.class, "id", id),
+        "There was an error while updating the group!"
+    );
+
+    return ok(asJson(updatedGroup));
   }
 
-  public static Result updateGroup(String id) {
-    return play.mvc.Results.TODO;
+  public static Result patchGroup(String id) throws CedarAssertionException {
+    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+
+    c.must(c.user()).be(GenericAssertions.loggedIn);
+    c.must(c.user()).have(CedarPermission.GROUP_UPDATE);
+
+    //c.must(c.request()).be(GenericAssertions.jsonBody);
+    c.must(c.request()).be(GenericAssertions.jsonMergePatch);
+    ICedarRequestBody requestBody = c.request().getJsonBody();
+
+    Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
+    CedarFSGroup existingGroup = findNonSpecialGroupById(c, neoSession, id);
+
+    ICedarParameter groupName = requestBody.get("name");
+    ICedarParameter groupDescription = requestBody.get("description");
+
+    boolean updateName = existingGroup.getName().equals(groupName.stringValue());
+    boolean updateDescription = existingGroup.getDescription().equals(groupDescription.stringValue());
+
+    if (!updateName && !updateDescription) {
+      return ok(asJson(existingGroup));
+    }
+
+    // check if the new name is unique
+    if (updateName) {
+      CedarFSGroup otherGroup = neoSession.findGroupByName(groupName.stringValue());
+      checkUniqueness(otherGroup, existingGroup);
+    }
+
+    Map<String, String> updateFields = new HashMap<>();
+    if (updateName) {
+      updateFields.put(Neo4JFields.NAME, groupName.stringValue());
+      updateFields.put(Neo4JFields.DISPLAY_NAME, groupName.stringValue());
+    }
+    if (updateDescription) {
+      updateFields.put(Neo4JFields.DESCRIPTION, groupDescription.stringValue());
+    }
+    CedarFSGroup updatedGroup = neoSession.updateGroupById(id, updateFields);
+
+    c.should(updatedGroup).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+        CedarOperations.update(CedarFSGroup.class, "id", id),
+        "There was an error while updating the group!"
+    );
+
+    return ok(asJson(updatedGroup));
+  }
+
+  private static CedarFSGroup findNonSpecialGroupById(ICedarRequestContext c, Neo4JUserSession neoSession, String id)
+      throws CedarAssertionException {
+    CedarFSGroup existingGroup = neoSession.findGroupById(id);
+    c.should(existingGroup).be(GenericAssertions.isNotNull).otherwiseNotFound(
+        CedarOperations.lookup(CedarFSGroup.class, "id", id),
+        "The group can not be found by id!"
+    );
+
+    if (existingGroup.getSpecialGroup() != null) {
+      CedarAssertionResult ar = new CedarAssertionResult("Special groups can not be modified!")
+          .setParameter("id", id)
+          .setParameter("specialGroup", existingGroup.getSpecialGroup())
+          .badRequest();
+      throw new CedarAssertionException(ar);
+    }
+    return existingGroup;
+  }
+
+  private static void checkUniqueness(CedarFSGroup otherGroup, CedarFSGroup existingGroup) throws
+      CedarAssertionException {
+    if (otherGroup != null && !otherGroup.getId().equals(existingGroup.getId())) {
+      CedarAssertionResult ar = new CedarAssertionResult(
+          "There is a group with the new name present in the system. Group names must be unique!")
+          .setParameter("name", otherGroup.getName())
+          .setParameter("id", otherGroup.getId())
+          .badRequest();
+      throw new CedarAssertionException(ar);
+    }
   }
 
   public static Result deleteGroup(String id) {
