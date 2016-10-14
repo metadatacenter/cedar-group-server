@@ -1,6 +1,6 @@
-# cedar-permission-server
+# cedar-group-server
 
-CEDAR service for managing resource permission
+CEDAR service for managing groups
 
 #### Questions
 

@@ -9,12 +9,12 @@
   </parent>
 
   <groupId>org.metadatacenter</groupId>
-  <artifactId>cedar-permission-server</artifactId>
+  <artifactId>cedar-group-server</artifactId>
   <version>0.8.3-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>CEDAR Permission Server</name>
-  <description>CEDAR server to manage Permissions</description>
+  <name>CEDAR Group Server</name>
+  <description>CEDAR server to manage Groups</description>
 
   <properties>
     <!-- Do Not Remove This! We need it in Pom.scala -->
@@ -22,15 +22,15 @@
   </properties>
 
   <scm>
-    <connection>scm:git:git@github.com:metadatacenter/cedar-permission-server.git</connection>
-    <developerConnection>scm:git:git@github.com:metadatacenter/cedar-permission-server.git</developerConnection>
-    <url>https://github.com/metadatacenter/cedar-permission-server</url>
+    <connection>scm:git:git@github.com:metadatacenter/cedar-group-server.git</connection>
+    <developerConnection>scm:git:git@github.com:metadatacenter/cedar-group-server.git</developerConnection>
+    <url>https://github.com/metadatacenter/cedar-group-server</url>
     <tag>HEAD</tag>
   </scm>
 
   <modules>
-    <module>cedar-permission-server-core</module>
-    <module>cedar-permission-server-play</module>
+    <module>cedar-group-server-core</module>
+    <module>cedar-group-server-play</module>
   </modules>
 
 </project>

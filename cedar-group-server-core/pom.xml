@@ -4,15 +4,15 @@
 
   <parent>
     <groupId>org.metadatacenter</groupId>
-    <artifactId>cedar-permission-server</artifactId>
+    <artifactId>cedar-group-server</artifactId>
     <version>0.8.3-SNAPSHOT</version>
   </parent>
 
   <groupId>org.metadatacenter</groupId>
-  <artifactId>cedar-permission-server-core</artifactId>
+  <artifactId>cedar-group-server-core</artifactId>
   <packaging>jar</packaging>
 
-  <name>CEDAR Permission Server Core</name>
+  <name>CEDAR Group Server Core</name>
 
   <dependencies>
 

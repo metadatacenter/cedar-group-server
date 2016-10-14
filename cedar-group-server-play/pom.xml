@@ -5,13 +5,13 @@
 
   <parent>
     <groupId>org.metadatacenter</groupId>
-    <artifactId>cedar-permission-server</artifactId>
+    <artifactId>cedar-group-server</artifactId>
     <version>0.8.3-SNAPSHOT</version>
   </parent>
 
   <groupId>org.metadatacenter</groupId>
-  <artifactId>cedar-permission-server-play</artifactId>
-  <name>CEDAR Permission Server Play</name>
+  <artifactId>cedar-group-server-play</artifactId>
+  <name>CEDAR Group Server Play</name>
   <packaging>play2</packaging>
 
   <properties>
@@ -24,7 +24,7 @@
     
     <dependency>
       <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-permission-server-core</artifactId>
+      <artifactId>cedar-group-server-core</artifactId>
     </dependency>
 
     <dependency>
