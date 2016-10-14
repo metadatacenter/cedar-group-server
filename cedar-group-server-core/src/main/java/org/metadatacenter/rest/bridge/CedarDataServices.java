@@ -31,4 +31,9 @@ public final class CedarDataServices {
   public static Neo4JUserSession getNeo4jSession(ICedarRequestContext context) {
     return Neo4JUserSession.get(instance.neo4JProxy, instance.userService, context.getCedarUser(), true);
   }
+
+  public static UserService getUserService() {
+    return instance.userService;
+  }
+
 }

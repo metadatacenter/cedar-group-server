@@ -1,6 +1,7 @@
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.ConfigFactory;
+import org.metadatacenter.rest.bridge.CedarDataServices;
 import org.metadatacenter.rest.exception.CedarAssertionException;
 import org.metadatacenter.server.play.AbstractCedarController;
 import org.metadatacenter.server.security.*;
@@ -10,7 +11,6 @@ import play.libs.F.Promise;
 import play.mvc.Action;
 import play.mvc.Http;
 import play.mvc.Result;
-import utils.DataServices;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -82,9 +82,6 @@ public class Global extends GlobalSettings {
 
   @Override
   public void onStart(Application application) {
-    //TODO get rid of this Data services instance, and the class altogether
-    // init data services
-    DataServices.getInstance();
     // init keycloak deployment
     KeycloakDeploymentProvider.getInstance();
     // init authorization resolver
@@ -97,7 +94,7 @@ public class Global extends GlobalSettings {
       authResolver = new AuthorizationKeycloakAndApiKeyResolver();
     }
     Authorization.setAuthorizationResolver(authResolver);
-    Authorization.setUserService(DataServices.getInstance().getUserService());
+    Authorization.setUserService(CedarDataServices.getUserService());
     // onStart
     super.onStart(application);
   }
