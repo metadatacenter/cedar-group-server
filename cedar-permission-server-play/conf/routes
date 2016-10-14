@@ -5,26 +5,6 @@
 # Home page
 GET            /                                          controllers.MainPermissionServerController.index()
 
-# Folders
-GET            /folders/:id/permissions                   controllers.FolderController.getPermissions(id: String)
-PUT            /folders/:id/permissions                   controllers.FolderController.updatePermissions(id: String)
-
-# Templates
-GET            /templates/:id/permissions                 controllers.TemplateController.getTemplatePermissions(id: String)
-PUT            /templates/:id/permissions                 controllers.TemplateController.updateTemplatePermissions(id: String)
-
-# Template Elements
-GET            /template-elements/:id/permissions         controllers.TemplateElementController.getTemplateElementPermissions(id: String)
-PUT            /template-elements/:id/permissions         controllers.TemplateElementController.updateTemplateElementPermissions(id: String)
-
-# Template Fields
-GET            /template-fields/:id/permissions           controllers.TemplateFieldController.getTemplateFieldPermissions(id: String)
-PUT            /template-fields/:id/permissions           controllers.TemplateFieldController.updateTemplateFieldPermissions(id: String)
-
-# Template Instances
-GET            /template-instances/:id/permissions        controllers.TemplateInstanceController.getTemplateInstancePermissions(id: String)
-PUT            /template-instances/:id/permissions        controllers.TemplateInstanceController.updateTemplateInstancePermissions(id: String)
-
 # Groups
 POST           /groups                                    controllers.GroupController.createGroup()
 GET            /groups                                    controllers.GroupController.findGroups()
@@ -32,10 +12,8 @@ GET            /groups/:id                                controllers.GroupContr
 PATCH          /groups/:id                                controllers.GroupController.patchGroup(id: String)
 PUT            /groups/:id                                controllers.GroupController.updateGroup(id: String)
 DELETE         /groups/:id                                controllers.GroupController.deleteGroup(id: String)
-GET            /groups/:id/members                        controllers.GroupController.getGroupMembers(id: String)
-PUT            /groups/:id/members                        controllers.GroupController.updateGroupMembers(id: String)
-
-GET            /accessible-node-ids                       controllers.PermissionController.accessibleNodeIds()
+GET            /groups/:id/users                          controllers.GroupController.getGroupMembers(id: String)
+PUT            /groups/:id/users                          controllers.GroupController.updateGroupMembers(id: String)
 
 # For CORS - preflight request
 OPTIONS        /*all                                      controllers.MainPermissionServerController.preflight(all)
