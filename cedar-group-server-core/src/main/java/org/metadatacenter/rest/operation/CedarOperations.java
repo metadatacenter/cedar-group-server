@@ -29,5 +29,8 @@ public final class CedarOperations {
     return new CedarDeleteOperation(clazz, lookupAttributeName, lookupAttributeValue);
   }
 
+  public static CedarListOperation list(Class clazz, String lookupAttributeName, String lookupAttributeValue) {
+    return new CedarListOperation(clazz, lookupAttributeName, lookupAttributeValue);
+  }
 }
 

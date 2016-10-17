@@ -2,6 +2,7 @@ package controllers;
 
 import org.metadatacenter.constant.HttpConstants;
 import org.metadatacenter.model.folderserver.CedarFSGroup;
+import org.metadatacenter.model.folderserver.CedarFSUser;
 import org.metadatacenter.model.response.FSGroupListResponse;
 import org.metadatacenter.rest.assertion.noun.ICedarParameter;
 import org.metadatacenter.rest.assertion.noun.ICedarRequestBody;
@@ -14,6 +15,7 @@ import org.metadatacenter.rest.exception.CedarAssertionResult;
 import org.metadatacenter.rest.operation.CedarOperations;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.neo4j.Neo4JUserSession;
+import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 import play.mvc.Result;
 
@@ -222,8 +224,25 @@ public class GroupController extends AbstractPermissionServerController {
     return noContent();
   }
 
-  public static Result getGroupMembers(String id) {
-    return play.mvc.Results.TODO;
+  public static Result getGroupMembers(String id) throws CedarAssertionException {
+    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+
+    c.must(c.user()).be(GenericAssertions.loggedIn);
+    c.must(c.user()).have(CedarPermission.GROUP_READ);
+
+    Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
+
+    CedarFSGroup group = neoSession.findGroupById(id);
+    c.should(group).be(GenericAssertions.isNotNull).otherwiseNotFound(
+        CedarOperations.lookup(CedarFSGroup.class, "id", id),
+        "The group can not be found by id!");
+
+    CedarGroupUsers groupUsers = neoSession.findGroupUsers(id);
+    c.should(groupUsers).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+        CedarOperations.list(CedarFSGroup.class, "id", id),
+        "There was an error while listing the group users!"
+    );
+    return ok(asJson(groupUsers));
   }
 
   public static Result updateGroupMembers(String id) {
