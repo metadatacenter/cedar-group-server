@@ -195,8 +195,31 @@ public class GroupController extends AbstractPermissionServerController {
     }
   }
 
-  public static Result deleteGroup(String id) {
-    return play.mvc.Results.TODO;
+  public static Result deleteGroup(String id) throws CedarAssertionException {
+    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+
+    c.must(c.user()).be(GenericAssertions.loggedIn);
+    c.must(c.user()).have(CedarPermission.GROUP_DELETE);
+
+    Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
+    CedarFSGroup existingGroup = neoSession.findGroupById(id);
+
+    c.should(existingGroup).be(GenericAssertions.isNotNull).otherwiseNotFound(
+        CedarOperations.lookup(CedarFSGroup.class, "id", id),
+        "The group can not be found by id!");
+
+    String specialGroup = existingGroup.getSpecialGroup();
+    c.should(specialGroup).be(GenericAssertions.isNull).otherwiseBadRequest(
+        CedarOperations.delete(CedarFSGroup.class, "id", id),
+        "The special group '" + specialGroup + "'can not be deleted!");
+
+    boolean deleted = neoSession.deleteGroupById(id);
+    c.should(deleted).be(GenericAssertions.isTrue).otherwiseInternalServerError(
+        CedarOperations.delete(CedarFSGroup.class, "id", id),
+        "There was an error while deleting the group!"
+    );
+
+    return noContent();
   }
 
   public static Result getGroupMembers(String id) {

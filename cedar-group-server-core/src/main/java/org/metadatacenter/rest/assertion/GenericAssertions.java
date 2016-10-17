@@ -7,4 +7,5 @@ public class GenericAssertions {
   public static IsNull isNull = new IsNull();
   public static IsNotNull isNotNull = new IsNotNull();
   public static ICedarAssertion jsonMergePatch = new JsonMergePatch();
+  public static ICedarAssertion isTrue = new IsTrue();
 }
