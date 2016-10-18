@@ -1,5 +1,6 @@
 package controllers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.metadatacenter.constant.HttpConstants;
 import org.metadatacenter.model.folderserver.CedarFSGroup;
 import org.metadatacenter.model.folderserver.CedarFSUser;
@@ -16,7 +17,10 @@ import org.metadatacenter.rest.operation.CedarOperations;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.neo4j.Neo4JUserSession;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
+import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
+import org.metadatacenter.server.security.model.auth.CedarNodePermissionsRequest;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
+import org.metadatacenter.util.json.JsonMapper;
 import play.mvc.Result;
 
 import java.util.HashMap;
@@ -245,7 +249,28 @@ public class GroupController extends AbstractPermissionServerController {
     return ok(asJson(groupUsers));
   }
 
-  public static Result updateGroupMembers(String id) {
-    return play.mvc.Results.TODO;
+  public static Result updateGroupMembers(String id) throws CedarAssertionException {
+    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+
+    c.must(c.user()).be(GenericAssertions.loggedIn);
+    c.must(c.user()).have(CedarPermission.GROUP_UPDATE);
+
+    Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
+
+    CedarFSGroup group = neoSession.findGroupById(id);
+    c.should(group).be(GenericAssertions.isNotNull).otherwiseNotFound(
+        CedarOperations.lookup(CedarFSGroup.class, "id", id),
+        "The group can not be found by id!");
+
+    CedarGroupUsers groupUsers = neoSession.findGroupUsers(id);
+    c.should(groupUsers).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+        CedarOperations.list(CedarFSGroup.class, "id", id),
+        "There was an error while listing the group users!"
+    );
+
+    ICedarRequestBody requestBody = c.request().getJsonBody();
+    CedarGroupUsersRequest usersRequest = requestBody.as(CedarGroupUsersRequest.class);
+
+    return ok(asJson(groupUsers));
   }
 }

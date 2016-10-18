@@ -18,18 +18,44 @@ public class CedarAssertionException extends Exception {
   public static final String STRING = "string";
   public static final String STACK_TRACE = "stackTrace";
   public static final String OPERATION = "operation";
+  public static final String SOURCE_STACK_TRACE = "sourceStackTrace";
 
   private CedarAssertionResult result;
   private ICedarOperationDescriptor operation;
+  private String errorSource;
+  private String errorType;
+  private Exception sourceException;
 
-  public CedarAssertionException(CedarAssertionResult result) {
-    this(result, null);
+  private CedarAssertionException(String message) {
+    super(message);
+  }
+
+  public CedarAssertionException(CedarAssertionResult result, ICedarOperationDescriptor operation,
+                                 Exception sourceException) {
+    this(result.getMessage());
+    this.result = result;
+    this.operation = operation;
+    this.errorSource = "cedarAssertionFramework";
+    this.errorType = "exception";
+    this.sourceException = sourceException;
   }
 
   public CedarAssertionException(CedarAssertionResult result, ICedarOperationDescriptor operation) {
-    super(result.getMessage());
-    this.result = result;
-    this.operation = operation;
+    this(result, operation, null);
+  }
+
+  public CedarAssertionException(CedarAssertionResult result) {
+    this(result, null, null);
+  }
+
+  public CedarAssertionException(Exception sourceException, String errorSource) {
+    this(null, null, sourceException);
+    this.errorSource = errorSource;
+  }
+
+  public CedarAssertionException(String errorMessage, String errorSource) {
+    this(errorMessage);
+    this.errorSource = errorSource;
   }
 
   public int getCode() {
@@ -38,7 +64,7 @@ public class CedarAssertionException extends Exception {
 
   public ObjectNode asJson() {
     ObjectNode objectNode = JsonMapper.MAPPER.createObjectNode();
-    addExceptionData(objectNode, this, "cedarAssertionFramework");
+    addExceptionData(objectNode);
     addOperationData(objectNode, this.operation);
 
     objectNode.put(ERROR_SUB_TYPE, result.getErrorSubType());
@@ -54,40 +80,27 @@ public class CedarAssertionException extends Exception {
     return objectNode;
   }
 
-  public static ObjectNode asJson(String errorSource, String errorMessage) {
-    ObjectNode objectNode = JsonMapper.MAPPER.createObjectNode();
-    addStringData(objectNode, errorSource, errorMessage);
-    return objectNode;
-  }
-
-  public static ObjectNode asJson(Exception ex) {
-    ObjectNode objectNode = JsonMapper.MAPPER.createObjectNode();
-    addExceptionData(objectNode, ex, "cedarServer");
-    return objectNode;
-  }
-
-  private static void addExceptionData(ObjectNode objectNode, Exception ex, String errorSource) {
+  private void addExceptionData(ObjectNode objectNode) {
     objectNode.put(ERROR_SOURCE, errorSource);
-    objectNode.put(ERROR_TYPE, "exception");
-    objectNode.put(MESSAGE, ex.getMessage());
-    objectNode.put(LOCALIZED_MESSAGE, ex.getLocalizedMessage());
-    objectNode.put(STRING, ex.toString());
+    objectNode.put(ERROR_TYPE, errorType);
+    objectNode.put(MESSAGE, this.getMessage());
+    objectNode.put(LOCALIZED_MESSAGE, this.getLocalizedMessage());
+    objectNode.put(STRING, this.toString());
 
     ArrayNode jsonST = objectNode.putArray(STACK_TRACE);
-    for (StackTraceElement ste : ex.getStackTrace()) {
+    for (StackTraceElement ste : this.getStackTrace()) {
       jsonST.add(ste.toString());
+    }
+
+    if (sourceException != null) {
+      ArrayNode jsonSST = objectNode.putArray(SOURCE_STACK_TRACE);
+      for (StackTraceElement ste : sourceException.getStackTrace()) {
+        jsonSST.add(ste.toString());
+      }
     }
   }
 
-  private static void addStringData(ObjectNode objectNode, String errorSource, String errorMessage) {
-    objectNode.put(ERROR_SOURCE, errorSource);
-    objectNode.put(ERROR_TYPE, "error");
-    objectNode.put(MESSAGE, errorMessage);
-    objectNode.put(LOCALIZED_MESSAGE, errorMessage);
-    objectNode.put(STRING, errorMessage);
-  }
-
-  private static void addOperationData(ObjectNode objectNode, ICedarOperationDescriptor operation) {
+  private void addOperationData(ObjectNode objectNode, ICedarOperationDescriptor operation) {
     if (operation != null) {
       objectNode.set(OPERATION, operation.asJson());
     }

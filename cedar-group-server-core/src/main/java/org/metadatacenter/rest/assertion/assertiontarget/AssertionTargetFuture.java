@@ -66,8 +66,7 @@ public abstract class AssertionTargetFuture<T> implements IAssertionTargetFuture
       if (message != null) {
         assertionResult.setMessage(message);
       }
-      CedarAssertionException ex = new CedarAssertionException(assertionResult, operation);
-      throw ex;
+      throw new CedarAssertionException(assertionResult, operation);
     }
   }
 

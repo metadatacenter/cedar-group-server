@@ -36,15 +36,15 @@ public class Global extends GlobalSettings {
   // If the framework doesn’t find an action method for a request, the onHandlerNotFound operation will be called:
   @Override
   public Promise<Result> onHandlerNotFound(Http.RequestHeader request) {
-    return Promise.<Result>pure(notFound(CedarAssertionException.asJson("play2Framework", "Missing route:" +
-        request.uri())));
+    return Promise.<Result>pure(notFound(new CedarAssertionException("Missing route:" + request.uri(),
+        "play2Framework").asJson()));
   }
 
   // The onBadRequest operation will be called if a route was found, but it was not possible to bind the request
   // parameters
   @Override
   public Promise<Result> onBadRequest(Http.RequestHeader request, String error) {
-    return Promise.<Result>pure(badRequest(CedarAssertionException.asJson("play2Framework", error)));
+    return Promise.<Result>pure(badRequest(new CedarAssertionException("play2Framework", error).asJson()));
   }
 
   /* For CORS */
@@ -61,7 +61,7 @@ public class Global extends GlobalSettings {
       } catch (CedarAssertionException cae) {
         result = Promise.<Result>pure(status(cae.getCode(), cae.asJson()));
       } catch (Exception ex) {
-        result = Promise.<Result>pure(internalServerError(CedarAssertionException.asJson(ex)));
+        result = Promise.<Result>pure(internalServerError(new CedarAssertionException(ex, "cedarServer").asJson()));
       }
       Http.Response response = ctx.response();
       response.setHeader("Access-Control-Allow-Origin", "*");
