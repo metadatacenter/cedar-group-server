@@ -16,10 +16,7 @@ import org.metadatacenter.rest.exception.CedarAssertionResult;
 import org.metadatacenter.rest.operation.CedarOperations;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.neo4j.Neo4JUserSession;
-import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
-import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
-import org.metadatacenter.server.security.model.auth.CedarNodePermissionsRequest;
-import org.metadatacenter.server.security.model.auth.CedarPermission;
+import org.metadatacenter.server.security.model.auth.*;
 import org.metadatacenter.util.json.JsonMapper;
 import play.mvc.Result;
 
@@ -270,6 +267,10 @@ public class GroupController extends AbstractPermissionServerController {
 
     ICedarRequestBody requestBody = c.request().getJsonBody();
     CedarGroupUsersRequest usersRequest = requestBody.as(CedarGroupUsersRequest.class);
+    List<CedarGroupUserRequest> users = usersRequest.getUsers();
+    for(CedarGroupUserRequest r : users) {
+      System.out.println(r.getUser().getId());
+    }
 
     return ok(asJson(groupUsers));
   }

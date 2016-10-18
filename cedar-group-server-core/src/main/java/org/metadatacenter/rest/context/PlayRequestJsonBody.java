@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.metadatacenter.rest.assertion.noun.ICedarParameter;
 import org.metadatacenter.rest.assertion.noun.ICedarRequestBody;
 import org.metadatacenter.rest.exception.CedarAssertionException;
-import org.metadatacenter.rest.exception.CedarAssertionResult;
 import org.metadatacenter.util.json.JsonMapper;
 
 public class PlayRequestJsonBody implements ICedarRequestBody {
@@ -35,9 +34,7 @@ public class PlayRequestJsonBody implements ICedarRequestBody {
       object = JsonMapper.MAPPER.treeToValue(bodyNode, type);
     } catch (JsonProcessingException e) {
       e.printStackTrace();
-      throw new CedarAssertionException(
-          new CedarAssertionResult("There was an error while deserializing the request body as:" + type).badRequest()
-      );
+      throw new CedarAssertionException(e);
     }
     return object;
   }

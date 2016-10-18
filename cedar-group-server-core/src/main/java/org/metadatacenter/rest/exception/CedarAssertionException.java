@@ -25,18 +25,23 @@ public class CedarAssertionException extends Exception {
   private String errorSource;
   private String errorType;
   private Exception sourceException;
+  private int code;
 
   private CedarAssertionException(String message) {
     super(message);
+    this.code = CedarAssertionResult.HTTP_INTERNAL_SERVER_ERROR;
+    this.errorType = "exception";
   }
 
   public CedarAssertionException(CedarAssertionResult result, ICedarOperationDescriptor operation,
                                  Exception sourceException) {
-    this(result.getMessage());
+    this(result != null ? result.getMessage() : sourceException != null ? sourceException.getMessage() : "");
     this.result = result;
+    if (result != null) {
+      this.code = result.getCode();
+    }
     this.operation = operation;
     this.errorSource = "cedarAssertionFramework";
-    this.errorType = "exception";
     this.sourceException = sourceException;
   }
 
@@ -46,6 +51,10 @@ public class CedarAssertionException extends Exception {
 
   public CedarAssertionException(CedarAssertionResult result) {
     this(result, null, null);
+  }
+
+  public CedarAssertionException(Exception sourceException) {
+    this(null, null, sourceException);
   }
 
   public CedarAssertionException(Exception sourceException, String errorSource) {
@@ -59,23 +68,28 @@ public class CedarAssertionException extends Exception {
   }
 
   public int getCode() {
-    return result.getCode();
+    return code;
   }
 
   public ObjectNode asJson() {
     ObjectNode objectNode = JsonMapper.MAPPER.createObjectNode();
     addExceptionData(objectNode);
-    addOperationData(objectNode, this.operation);
 
-    objectNode.put(ERROR_SUB_TYPE, result.getErrorSubType());
-    objectNode.put(ERROR_CODE, result.getErrorCode());
-    objectNode.put(SUGGESTED_ACTION, result.getSuggestedAction());
-
-    ObjectNode errorParams = JsonMapper.MAPPER.createObjectNode();
-    for (String key : result.getParameters().keySet()) {
-      errorParams.set(key, JsonMapper.MAPPER.valueToTree(result.getParameters().get(key)));
+    if (operation != null) {
+      objectNode.set(OPERATION, operation.asJson());
     }
-    objectNode.set(ERROR_PARAMS, errorParams);
+
+    if (result != null) {
+      objectNode.put(ERROR_SUB_TYPE, result.getErrorSubType());
+      objectNode.put(ERROR_CODE, result.getErrorCode());
+      objectNode.put(SUGGESTED_ACTION, result.getSuggestedAction());
+
+      ObjectNode errorParams = JsonMapper.MAPPER.createObjectNode();
+      for (String key : result.getParameters().keySet()) {
+        errorParams.set(key, JsonMapper.MAPPER.valueToTree(result.getParameters().get(key)));
+      }
+      objectNode.set(ERROR_PARAMS, errorParams);
+    }
 
     return objectNode;
   }
@@ -95,14 +109,10 @@ public class CedarAssertionException extends Exception {
     if (sourceException != null) {
       ArrayNode jsonSST = objectNode.putArray(SOURCE_STACK_TRACE);
       for (StackTraceElement ste : sourceException.getStackTrace()) {
-        jsonSST.add(ste.toString());
+        if (ste != null) {
+          jsonSST.add(ste.toString());
+        }
       }
-    }
-  }
-
-  private void addOperationData(ObjectNode objectNode, ICedarOperationDescriptor operation) {
-    if (operation != null) {
-      objectNode.set(OPERATION, operation.asJson());
     }
   }
 
