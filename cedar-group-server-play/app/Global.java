@@ -1,12 +1,8 @@
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.ConfigFactory;
-import org.metadatacenter.rest.bridge.CedarDataServices;
+import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.rest.exception.CedarAssertionException;
-import org.metadatacenter.server.play.AbstractCedarController;
 import org.metadatacenter.server.security.*;
 import play.*;
-import play.libs.F;
 import play.libs.F.Promise;
 import play.mvc.Action;
 import play.mvc.Http;
@@ -85,10 +81,10 @@ public class Global extends GlobalSettings {
     // init keycloak deployment
     KeycloakDeploymentProvider.getInstance();
     // init authorization resolver
-    IAuthorizationResolver authResolver = null;
+    IAuthorizationResolver authResolver;
     Configuration config = application.configuration();
     Boolean noAuth = config.getBoolean("authentication.noAuth");
-    if (noAuth != null && noAuth.booleanValue()) {
+    if (noAuth != null && noAuth) {
       authResolver = new AuthorizationNoauthResolver();
     } else {
       authResolver = new AuthorizationKeycloakAndApiKeyResolver();

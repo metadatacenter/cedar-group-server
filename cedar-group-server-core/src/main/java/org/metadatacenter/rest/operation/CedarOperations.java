@@ -1,13 +1,13 @@
 package org.metadatacenter.rest.operation;
 
-import org.metadatacenter.rest.assertion.noun.ICedarParameter;
+import org.metadatacenter.rest.assertion.noun.CedarParameter;
 
 public final class CedarOperations {
 
   private CedarOperations() {
   }
 
-  public static CedarLookupOperation lookup(Class clazz, String lookupAttributeName, ICedarParameter
+  public static CedarLookupOperation lookup(Class clazz, String lookupAttributeName, CedarParameter
       lookupAttributeValue) {
     return new CedarLookupOperation(clazz, lookupAttributeName, lookupAttributeValue.stringValue());
   }
@@ -16,7 +16,7 @@ public final class CedarOperations {
     return new CedarLookupOperation(clazz, lookupAttributeName, lookupAttributeValue);
   }
 
-  public static CedarCreateOperation create(Class clazz, String primaryIdAttributeName, ICedarParameter
+  public static CedarCreateOperation create(Class clazz, String primaryIdAttributeName, CedarParameter
       primaryIdAttributeValue) {
     return new CedarCreateOperation(clazz, primaryIdAttributeName, primaryIdAttributeValue);
   }

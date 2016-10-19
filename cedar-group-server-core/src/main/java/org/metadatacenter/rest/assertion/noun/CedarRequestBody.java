@@ -1,11 +1,11 @@
 package org.metadatacenter.rest.assertion.noun;
 
-import org.metadatacenter.rest.ICedarAssertionNoun;
+import org.metadatacenter.rest.CedarAssertionNoun;
 import org.metadatacenter.rest.exception.CedarAssertionException;
 
-public interface ICedarRequestBody extends ICedarAssertionNoun {
+public interface CedarRequestBody extends CedarAssertionNoun {
 
-  ICedarParameter get(String name);
+  CedarParameter get(String name);
 
   <T> T as(Class<T> type) throws CedarAssertionException;
 }

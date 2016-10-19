@@ -4,11 +4,11 @@ import org.metadatacenter.constant.HttpConstants;
 import org.metadatacenter.model.folderserver.CedarFSGroup;
 import org.metadatacenter.model.response.FSGroupListResponse;
 import org.metadatacenter.rest.assertion.GenericAssertions;
-import org.metadatacenter.rest.assertion.noun.ICedarParameter;
-import org.metadatacenter.rest.assertion.noun.ICedarRequestBody;
-import org.metadatacenter.rest.bridge.CedarDataServices;
+import org.metadatacenter.rest.assertion.noun.CedarParameter;
+import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
+import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.rest.context.CedarRequestContextFactory;
-import org.metadatacenter.rest.context.ICedarRequestContext;
+import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionException;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 import org.metadatacenter.rest.operation.CedarOperations;
@@ -29,7 +29,7 @@ public class GroupController extends AbstractPermissionServerController {
 
 
   public static Result findGroups() throws CedarAssertionException {
-    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
     c.must(c.user()).be(GenericAssertions.loggedIn);
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
@@ -41,16 +41,16 @@ public class GroupController extends AbstractPermissionServerController {
   }
 
   public static Result createGroup() throws CedarAssertionException {
-    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
     c.must(c.user()).be(GenericAssertions.loggedIn);
     c.must(c.user()).have(CedarPermission.GROUP_CREATE);
 
     c.must(c.request()).be(GenericAssertions.jsonBody);
-    ICedarRequestBody requestBody = c.request().getJsonBody();
+    CedarRequestBody requestBody = c.request().getJsonBody();
 
-    ICedarParameter groupName = requestBody.get("name");
-    ICedarParameter groupDescription = requestBody.get("description");
+    CedarParameter groupName = requestBody.get("name");
+    CedarParameter groupDescription = requestBody.get("description");
     c.should(groupName, groupDescription).be(GenericAssertions.isNotNull).otherwiseBadRequest();
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
@@ -73,7 +73,7 @@ public class GroupController extends AbstractPermissionServerController {
   }
 
   public static Result findGroup(String id) throws CedarAssertionException {
-    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
     c.must(c.user()).be(GenericAssertions.loggedIn);
     c.must(c.user()).have(CedarPermission.GROUP_READ);
@@ -89,19 +89,19 @@ public class GroupController extends AbstractPermissionServerController {
   }
 
   public static Result updateGroup(String id) throws CedarAssertionException {
-    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
     c.must(c.user()).be(GenericAssertions.loggedIn);
     c.must(c.user()).have(CedarPermission.GROUP_UPDATE);
 
     c.must(c.request()).be(GenericAssertions.jsonBody);
-    ICedarRequestBody requestBody = c.request().getJsonBody();
+    CedarRequestBody requestBody = c.request().getJsonBody();
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
     CedarFSGroup existingGroup = findNonSpecialGroupById(c, neoSession, id);
 
-    ICedarParameter groupName = requestBody.get("name");
-    ICedarParameter groupDescription = requestBody.get("description");
+    CedarParameter groupName = requestBody.get("name");
+    CedarParameter groupDescription = requestBody.get("description");
     c.should(groupName, groupDescription).be(GenericAssertions.isNotNull).otherwiseBadRequest();
 
     // check if the new name is unique
@@ -123,20 +123,20 @@ public class GroupController extends AbstractPermissionServerController {
   }
 
   public static Result patchGroup(String id) throws CedarAssertionException {
-    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
     c.must(c.user()).be(GenericAssertions.loggedIn);
     c.must(c.user()).have(CedarPermission.GROUP_UPDATE);
 
     //c.must(c.request()).be(GenericAssertions.jsonBody);
     c.must(c.request()).be(GenericAssertions.jsonMergePatch);
-    ICedarRequestBody requestBody = c.request().getJsonBody();
+    CedarRequestBody requestBody = c.request().getJsonBody();
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
     CedarFSGroup existingGroup = findNonSpecialGroupById(c, neoSession, id);
 
-    ICedarParameter groupName = requestBody.get("name");
-    ICedarParameter groupDescription = requestBody.get("description");
+    CedarParameter groupName = requestBody.get("name");
+    CedarParameter groupDescription = requestBody.get("description");
 
     boolean updateName = existingGroup.getName().equals(groupName.stringValue());
     boolean updateDescription = existingGroup.getDescription().equals(groupDescription.stringValue());
@@ -169,7 +169,7 @@ public class GroupController extends AbstractPermissionServerController {
     return ok(asJson(updatedGroup));
   }
 
-  private static CedarFSGroup findNonSpecialGroupById(ICedarRequestContext c, Neo4JUserSession neoSession, String id)
+  private static CedarFSGroup findNonSpecialGroupById(CedarRequestContext c, Neo4JUserSession neoSession, String id)
       throws CedarAssertionException {
     CedarFSGroup existingGroup = neoSession.findGroupById(id);
     c.should(existingGroup).be(GenericAssertions.isNotNull).otherwiseNotFound(
@@ -200,7 +200,7 @@ public class GroupController extends AbstractPermissionServerController {
   }
 
   public static Result deleteGroup(String id) throws CedarAssertionException {
-    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
     c.must(c.user()).be(GenericAssertions.loggedIn);
     c.must(c.user()).have(CedarPermission.GROUP_DELETE);
@@ -227,7 +227,7 @@ public class GroupController extends AbstractPermissionServerController {
   }
 
   public static Result getGroupMembers(String id) throws CedarAssertionException {
-    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
     c.must(c.user()).be(GenericAssertions.loggedIn);
     c.must(c.user()).have(CedarPermission.GROUP_READ);
@@ -248,7 +248,7 @@ public class GroupController extends AbstractPermissionServerController {
   }
 
   public static Result updateGroupMembers(String id) throws CedarAssertionException {
-    ICedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
     c.must(c.user()).be(GenericAssertions.loggedIn);
     c.must(c.user()).have(CedarPermission.GROUP_UPDATE);
@@ -279,7 +279,7 @@ public class GroupController extends AbstractPermissionServerController {
         CedarOperations.update(CedarFSGroup.class, "id", id),
         "Only the administrators can update the group!");
 
-    ICedarRequestBody requestBody = c.request().getJsonBody();
+    CedarRequestBody requestBody = c.request().getJsonBody();
     CedarGroupUsersRequest usersRequest = requestBody.as(CedarGroupUsersRequest.class);
 
     BackendCallResult backendCallResult = neoSession.updateGroupUsers(id, usersRequest);

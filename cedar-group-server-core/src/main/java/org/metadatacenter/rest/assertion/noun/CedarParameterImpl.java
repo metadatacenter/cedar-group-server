@@ -1,15 +1,15 @@
-package org.metadatacenter.rest.context;
+package org.metadatacenter.rest.assertion.noun;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.metadatacenter.rest.assertion.noun.ParameterNoun;
+import org.metadatacenter.rest.context.CedarParameterSource;
 
-public class CedarParameter extends ParameterNoun {
+public class CedarParameterImpl extends ParameterNoun {
 
-  private String name;
-  private CedarParameterSource source;
+  private final String name;
+  private final CedarParameterSource source;
   private JsonNode jsonNode;
 
-  public CedarParameter(String name, CedarParameterSource source) {
+  public CedarParameterImpl(String name, CedarParameterSource source) {
     this.name = name;
     this.source = source;
   }

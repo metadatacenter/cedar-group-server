@@ -1,23 +1,22 @@
 package org.metadatacenter.rest.assertion;
 
-import org.metadatacenter.rest.ICedarAssertionNoun;
-import org.metadatacenter.rest.assertion.noun.ICedarParameter;
-import org.metadatacenter.rest.context.ICedarRequestContext;
-import org.metadatacenter.rest.exception.CedarAssertionException;
+import org.metadatacenter.rest.CedarAssertionNoun;
+import org.metadatacenter.rest.assertion.noun.CedarParameter;
+import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 
-public class IsNull implements ICedarAssertion {
+public class IsNull implements CedarAssertion {
 
   IsNull() {
   }
 
   @Override
-  public CedarAssertionResult check(ICedarRequestContext requestContext, ICedarAssertionNoun target) {
+  public CedarAssertionResult check(CedarRequestContext requestContext, CedarAssertionNoun target) {
     if (target == null) {
       return null;
     } else {
-      if (target instanceof ICedarParameter) {
-        ICedarParameter param = (ICedarParameter) target;
+      if (target instanceof CedarParameter) {
+        CedarParameter param = (CedarParameter) target;
         if (param.isNull()) {
           return null;
         } else {
@@ -33,7 +32,7 @@ public class IsNull implements ICedarAssertion {
   }
 
   @Override
-  public CedarAssertionResult check(ICedarRequestContext requestContext, Object target) {
+  public CedarAssertionResult check(CedarRequestContext requestContext, Object target) {
     if (target == null) {
       return null;
     } else {

@@ -1,18 +1,17 @@
 package org.metadatacenter.rest.context;
 
-import org.metadatacenter.rest.ICedarAssertionNoun;
+import org.metadatacenter.rest.CedarAssertionNoun;
 import org.metadatacenter.rest.assertion.assertiontarget.*;
-import org.metadatacenter.rest.assertion.noun.ICedarRequest;
-import org.metadatacenter.rest.assertion.noun.ICedarUser;
-import org.metadatacenter.server.security.model.IAuthRequest;
-import org.metadatacenter.server.security.model.user.CedarUser;
+import org.metadatacenter.rest.assertion.noun.CedarRequest;
+import org.metadatacenter.rest.assertion.noun.CedarAssertionUser;
+import org.metadatacenter.server.security.model.AuthRequest;
 
-public abstract class AbstractRequestContext implements ICedarRequestContext {
+public abstract class AbstractRequestContext implements CedarRequestContext {
 
-  protected CedarUser currentUser;
-  protected ICedarUser user;
-  protected ICedarRequest wrappedRequest;
-  protected IAuthRequest authRequest;
+  protected org.metadatacenter.server.security.model.user.CedarUser currentUser;
+  protected CedarAssertionUser user;
+  protected CedarRequest wrappedRequest;
+  protected AuthRequest authRequest;
 
   protected void initialize() {
     initializeLocal();
@@ -21,42 +20,42 @@ public abstract class AbstractRequestContext implements ICedarRequestContext {
   abstract void initializeLocal();
 
   @Override
-  public ICedarUser user() {
+  public CedarAssertionUser user() {
     return user;
   }
 
   @Override
-  public IAssertionNounTargetFuture should(ICedarAssertionNoun... targets) {
-    return new AssertionNounTargetFuture(this, targets);
+  public AssertionNounTargetFuture should(CedarAssertionNoun... targets) {
+    return new AssertionNounTargetFutureImpl(this, targets);
   }
 
   @Override
-  public IAssertionPOJOTargetFuture should(Object... targets) {
-    return new AssertionPOJOTargetFuture(this, targets);
+  public AssertionPOJOTargetFuture should(Object... targets) {
+    return new AssertionPOJOTargetFutureImpl(this, targets);
   }
 
   @Override
-  public IAssertionNounTargetPresent must(ICedarAssertionNoun... targets) {
-    return new AssertionNounTargetPresent(this, targets);
+  public AssertionNounTargetPresent must(CedarAssertionNoun... targets) {
+    return new AssertionNounTargetPresentImpl(this, targets);
   }
 
   @Override
-  public IAssertionPOJOTargetPresent must(Object... targets) {
-    return new AssertionPOJOTargetPresent(this, targets);
+  public AssertionPOJOTargetPresent must(Object... targets) {
+    return new AssertionPOJOTargetPresentImpl(this, targets);
   }
 
   @Override
-  public CedarUser getCedarUser() {
+  public org.metadatacenter.server.security.model.user.CedarUser getCedarUser() {
     return currentUser;
   }
 
   @Override
-  public ICedarRequest request() {
+  public CedarRequest request() {
     return wrappedRequest;
   }
 
   @Override
-  public IAuthRequest getAuthRequest() {
+  public AuthRequest getAuthRequest() {
     return authRequest;
   }
 

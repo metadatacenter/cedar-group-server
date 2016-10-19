@@ -2,7 +2,7 @@ package org.metadatacenter.rest.exception;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.metadatacenter.rest.ICedarOperationDescriptor;
+import org.metadatacenter.rest.CedarOperationDescriptor;
 import org.metadatacenter.util.json.JsonMapper;
 
 public class CedarAssertionException extends Exception {
@@ -21,9 +21,9 @@ public class CedarAssertionException extends Exception {
   public static final String SOURCE_STACK_TRACE = "sourceStackTrace";
 
   private CedarAssertionResult result;
-  private ICedarOperationDescriptor operation;
+  private CedarOperationDescriptor operation;
   private String errorSource;
-  private String errorType;
+  private final String errorType;
   private Exception sourceException;
   private int code;
 
@@ -33,7 +33,7 @@ public class CedarAssertionException extends Exception {
     this.errorType = "exception";
   }
 
-  public CedarAssertionException(CedarAssertionResult result, ICedarOperationDescriptor operation,
+  public CedarAssertionException(CedarAssertionResult result, CedarOperationDescriptor operation,
                                  Exception sourceException) {
     this(result != null ? result.getMessage() : sourceException != null ? sourceException.getMessage() : "");
     this.result = result;
@@ -45,7 +45,7 @@ public class CedarAssertionException extends Exception {
     this.sourceException = sourceException;
   }
 
-  public CedarAssertionException(CedarAssertionResult result, ICedarOperationDescriptor operation) {
+  public CedarAssertionException(CedarAssertionResult result, CedarOperationDescriptor operation) {
     this(result, operation, null);
   }
 

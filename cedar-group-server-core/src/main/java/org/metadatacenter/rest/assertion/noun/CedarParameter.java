@@ -1,9 +1,9 @@
 package org.metadatacenter.rest.assertion.noun;
 
-import org.metadatacenter.rest.ICedarAssertionNoun;
+import org.metadatacenter.rest.CedarAssertionNoun;
 import org.metadatacenter.rest.context.CedarParameterSource;
 
-public interface ICedarParameter extends ICedarAssertionNoun {
+public interface CedarParameter extends CedarAssertionNoun {
 
   String stringValue();
 

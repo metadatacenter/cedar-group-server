@@ -2,14 +2,14 @@ package org.metadatacenter.rest.operation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.metadatacenter.rest.ICedarOperationDescriptor;
+import org.metadatacenter.rest.CedarOperationDescriptor;
 import org.metadatacenter.util.json.JsonMapper;
 
-public class CedarCreateOperation implements ICedarOperationDescriptor {
+public class CedarCreateOperation implements CedarOperationDescriptor {
 
-  private Class clazz;
-  private String primaryIdAttributeName;
-  private Object primaryIdAttributeValue;
+  private final Class clazz;
+  private final String primaryIdAttributeName;
+  private final Object primaryIdAttributeValue;
 
   public CedarCreateOperation(Class clazz, String primaryIdAttributeName, Object primaryIdAttributeValue) {
     this.clazz = clazz;

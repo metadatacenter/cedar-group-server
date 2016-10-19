@@ -1,11 +1,11 @@
 package org.metadatacenter.rest.assertion.noun;
 
-import org.metadatacenter.rest.ICedarAssertionNoun;
+import org.metadatacenter.rest.CedarAssertionNoun;
 import org.metadatacenter.server.security.model.user.CedarUser;
 
-public class UserNoun implements ICedarUser, ICedarAssertionNoun {
+public class UserNoun implements CedarAssertionUser, CedarAssertionNoun {
 
-  private CedarUser user;
+  private final CedarUser user;
 
   public UserNoun(CedarUser user) {
     this.user = user;

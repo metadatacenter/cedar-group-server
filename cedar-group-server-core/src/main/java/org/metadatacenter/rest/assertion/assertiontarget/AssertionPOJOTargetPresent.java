@@ -1,35 +1,10 @@
 package org.metadatacenter.rest.assertion.assertiontarget;
 
-import org.metadatacenter.rest.assertion.ICedarAssertion;
-import org.metadatacenter.rest.context.ICedarRequestContext;
+import org.metadatacenter.rest.assertion.CedarAssertion;
 import org.metadatacenter.rest.exception.CedarAssertionException;
-import org.metadatacenter.rest.exception.CedarAssertionResult;
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
+public interface AssertionPOJOTargetPresent {
 
-public class AssertionPOJOTargetPresent implements IAssertionPOJOTargetPresent {
+  void be(CedarAssertion... assertions) throws CedarAssertionException;
 
-  private Collection<Object> targets;
-  private ICedarRequestContext requestContext;
-
-  public AssertionPOJOTargetPresent(ICedarRequestContext requestContext, Object... targets) {
-    this.requestContext = requestContext;
-    this.targets = new LinkedHashSet<>();
-    for (Object target : targets) {
-      this.targets.add(target);
-    }
-  }
-
-  @Override
-  public void be(ICedarAssertion... assertions) throws CedarAssertionException {
-    for (Object target : targets) {
-      for (ICedarAssertion assertion : assertions) {
-        CedarAssertionResult result = assertion.check(requestContext, target);
-        if (result != null) {
-          throw new CedarAssertionException(result);
-        }
-      }
-    }
-  }
 }

@@ -1,25 +1,25 @@
 package org.metadatacenter.rest.assertion;
 
-import org.metadatacenter.rest.ICedarAssertionNoun;
-import org.metadatacenter.rest.context.ICedarRequestContext;
+import org.metadatacenter.rest.CedarAssertionNoun;
+import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 
-public class IsTrue implements ICedarAssertion {
+public class IsTrue implements CedarAssertion {
 
   IsTrue() {
   }
 
   @Override
-  public CedarAssertionResult check(ICedarRequestContext requestContext, ICedarAssertionNoun target) {
+  public CedarAssertionResult check(CedarRequestContext requestContext, CedarAssertionNoun target) {
     return new CedarAssertionResult("Not implemented for ICedarAssertionNoun");
   }
 
   @Override
-  public CedarAssertionResult check(ICedarRequestContext requestContext, Object target) {
+  public CedarAssertionResult check(CedarRequestContext requestContext, Object target) {
     if (target != null) {
       if (target instanceof Boolean) {
         Boolean b = (Boolean) target;
-        if (b != null && b.equals(Boolean.TRUE)) {
+        if (b.equals(Boolean.TRUE)) {
           return null;
         }
       }

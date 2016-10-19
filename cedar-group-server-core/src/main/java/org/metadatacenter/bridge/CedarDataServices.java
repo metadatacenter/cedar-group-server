@@ -1,8 +1,8 @@
-package org.metadatacenter.rest.bridge;
+package org.metadatacenter.bridge;
 
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.model.CedarNodeType;
-import org.metadatacenter.rest.context.ICedarRequestContext;
+import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.neo4j.Neo4JProxy;
 import org.metadatacenter.server.neo4j.Neo4JUserSession;
 import org.metadatacenter.server.neo4j.Neo4jConfig;
@@ -11,14 +11,13 @@ import org.metadatacenter.server.service.mongodb.UserServiceMongoDB;
 
 public final class CedarDataServices {
 
-  private static CedarDataServices instance = new CedarDataServices();
+  private static final CedarDataServices instance = new CedarDataServices();
 
-  private CedarConfig cedarConfig;
-  private UserService userService;
-  private Neo4JProxy neo4JProxy;
+  private final UserService userService;
+  private final Neo4JProxy neo4JProxy;
 
   private CedarDataServices() {
-    cedarConfig = CedarConfig.getInstance();
+    CedarConfig cedarConfig = CedarConfig.getInstance();
 
     userService = new UserServiceMongoDB(cedarConfig.getMongoConfig().getDatabaseName(),
         cedarConfig.getMongoCollectionName(CedarNodeType.USER));
@@ -28,7 +27,7 @@ public final class CedarDataServices {
         cedarConfig.getLinkedDataConfig().getUsersBase());
   }
 
-  public static Neo4JUserSession getNeo4jSession(ICedarRequestContext context) {
+  public static Neo4JUserSession getNeo4jSession(CedarRequestContext context) {
     return Neo4JUserSession.get(instance.neo4JProxy, instance.userService, context.getCedarUser(), true);
   }
 

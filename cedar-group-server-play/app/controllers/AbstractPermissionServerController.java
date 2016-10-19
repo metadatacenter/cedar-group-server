@@ -5,7 +5,7 @@ import org.metadatacenter.server.play.AbstractCedarController;
 
 public class AbstractPermissionServerController extends AbstractCedarController {
 
-  protected static CedarConfig cedarConfig;
+  protected static final CedarConfig cedarConfig;
 
   static {
     cedarConfig = CedarConfig.getInstance();

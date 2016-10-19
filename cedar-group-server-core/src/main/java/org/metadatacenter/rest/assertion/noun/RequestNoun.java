@@ -1,6 +1,6 @@
 package org.metadatacenter.rest.assertion.noun;
 
-import org.metadatacenter.rest.ICedarAssertionNoun;
+import org.metadatacenter.rest.CedarAssertionNoun;
 
-public abstract class RequestNoun implements ICedarRequest, ICedarAssertionNoun {
+public abstract class RequestNoun implements CedarRequest, CedarAssertionNoun {
 }

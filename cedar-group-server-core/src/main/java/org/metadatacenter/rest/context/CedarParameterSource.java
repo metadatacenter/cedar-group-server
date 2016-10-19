@@ -5,7 +5,7 @@ public enum CedarParameterSource {
   JsonBody("JsonBody"),
   QueryString("QueryString");
 
-  private String value;
+  private final String value;
 
   CedarParameterSource(String value) {
     this.value = value;
