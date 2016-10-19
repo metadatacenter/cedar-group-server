@@ -40,6 +40,11 @@ public abstract class AssertionTargetFuture<T> implements IAssertionTargetFuture
         CedarAssertionResult.HTTP_NOT_FOUND);
   }
 
+  @Override
+  public void otherwiseForbidden(ICedarOperationDescriptor operation, String message) throws CedarAssertionException {
+    buildAndThrowAssertionExceptionIfNeeded(getFirstAssertionError(), operation, message,
+        CedarAssertionResult.HTTP_FORBIDDEN);
+  }
 
   protected CedarAssertionResult getFirstAssertionError() {
     CedarAssertionResult assertionError = null;

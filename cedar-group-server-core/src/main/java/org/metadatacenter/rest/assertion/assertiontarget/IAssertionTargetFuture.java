@@ -12,4 +12,6 @@ public interface IAssertionTargetFuture {
   void otherwiseInternalServerError(ICedarOperationDescriptor operation, String message) throws CedarAssertionException;
 
   void otherwiseNotFound(ICedarOperationDescriptor operation, String message) throws CedarAssertionException;
+
+  void otherwiseForbidden(ICedarOperationDescriptor operation, String message) throws CedarAssertionException;
 }

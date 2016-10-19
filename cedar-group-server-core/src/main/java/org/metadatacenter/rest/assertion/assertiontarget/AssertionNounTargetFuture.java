@@ -1,8 +1,10 @@
 package org.metadatacenter.rest.assertion.assertiontarget;
 
 import org.metadatacenter.rest.ICedarAssertionNoun;
+import org.metadatacenter.rest.ICedarOperationDescriptor;
 import org.metadatacenter.rest.assertion.ICedarAssertion;
 import org.metadatacenter.rest.context.ICedarRequestContext;
+import org.metadatacenter.rest.exception.CedarAssertionException;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 
 import java.util.Collection;
@@ -38,4 +40,5 @@ public class AssertionNounTargetFuture extends AssertionTargetFuture<ICedarAsser
     }
     return this;
   }
+
 }

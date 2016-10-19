@@ -1,13 +1,11 @@
 package controllers;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.metadatacenter.constant.HttpConstants;
 import org.metadatacenter.model.folderserver.CedarFSGroup;
-import org.metadatacenter.model.folderserver.CedarFSUser;
 import org.metadatacenter.model.response.FSGroupListResponse;
+import org.metadatacenter.rest.assertion.GenericAssertions;
 import org.metadatacenter.rest.assertion.noun.ICedarParameter;
 import org.metadatacenter.rest.assertion.noun.ICedarRequestBody;
-import org.metadatacenter.rest.assertion.GenericAssertions;
 import org.metadatacenter.rest.bridge.CedarDataServices;
 import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.rest.context.ICedarRequestContext;
@@ -16,8 +14,11 @@ import org.metadatacenter.rest.exception.CedarAssertionResult;
 import org.metadatacenter.rest.operation.CedarOperations;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.neo4j.Neo4JUserSession;
-import org.metadatacenter.server.security.model.auth.*;
-import org.metadatacenter.util.json.JsonMapper;
+import org.metadatacenter.server.result.BackendCallResult;
+import org.metadatacenter.server.security.model.auth.CedarGroupUser;
+import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
+import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
+import org.metadatacenter.server.security.model.auth.CedarPermission;
 import play.mvc.Result;
 
 import java.util.HashMap;
@@ -265,13 +266,32 @@ public class GroupController extends AbstractPermissionServerController {
         "There was an error while listing the group users!"
     );
 
-    ICedarRequestBody requestBody = c.request().getJsonBody();
-    CedarGroupUsersRequest usersRequest = requestBody.as(CedarGroupUsersRequest.class);
-    List<CedarGroupUserRequest> users = usersRequest.getUsers();
-    for(CedarGroupUserRequest r : users) {
-      System.out.println(r.getUser().getId());
+    String currentUserId = neoSession.getUserId();
+    boolean currentUserIsGroupAdmin = false;
+    for(CedarGroupUser user : groupUsers.getUsers()) {
+      if (currentUserId.equals(user.getUser().getId()) && user.isAdministrator()) {
+        currentUserIsGroupAdmin = true;
+        break;
+      }
     }
 
-    return ok(asJson(groupUsers));
+    c.should(currentUserIsGroupAdmin).be(GenericAssertions.isTrue).otherwiseForbidden(
+        CedarOperations.update(CedarFSGroup.class, "id", id),
+        "Only the administrators can update the group!");
+
+    ICedarRequestBody requestBody = c.request().getJsonBody();
+    CedarGroupUsersRequest usersRequest = requestBody.as(CedarGroupUsersRequest.class);
+
+    BackendCallResult backendCallResult = neoSession.updateGroupUsers(id, usersRequest);
+    //TODO : implement this instead of the if
+    // c.backend(backendCallResult);
+    // or
+    // c.backend(neoSession.updateGroupUsers(id, usersRequest));
+    if (backendCallResult.isError()) {
+      return backendCallError(backendCallResult);
+    }
+
+    CedarGroupUsers updatedGroupUsers = neoSession.findGroupUsers(id);
+    return ok(asJson(updatedGroupUsers));
   }
 }
