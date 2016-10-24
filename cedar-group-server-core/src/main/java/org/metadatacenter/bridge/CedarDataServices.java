@@ -3,6 +3,7 @@ package org.metadatacenter.bridge;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.model.CedarNodeType;
 import org.metadatacenter.rest.context.CedarRequestContext;
+import org.metadatacenter.server.GroupServiceSession;
 import org.metadatacenter.server.neo4j.Neo4JProxy;
 import org.metadatacenter.server.neo4j.Neo4JUserSession;
 import org.metadatacenter.server.neo4j.Neo4jConfig;
@@ -27,7 +28,7 @@ public final class CedarDataServices {
         cedarConfig.getLinkedDataConfig().getUsersBase());
   }
 
-  public static Neo4JUserSession getNeo4jSession(CedarRequestContext context) {
+  public static GroupServiceSession getGroupServiceSession(CedarRequestContext context) {
     return Neo4JUserSession.get(instance.neo4JProxy, instance.userService, context.getCedarUser(), true);
   }
 
