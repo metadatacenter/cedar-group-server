@@ -1,6 +1,6 @@
 logs
-project/project
-project/target
+/project/project
+/project/target
 target
 tmp
 .history
@@ -11,9 +11,9 @@ dist
 /.idea_modules
 /.classpath
 /.project
-*/RUNNING_PID
 /.settings
 keycloak.json
+RUNNING_PID
 CEDAR_HOME_IS_UNDEFINED
 
 pom.xml.releaseBackup

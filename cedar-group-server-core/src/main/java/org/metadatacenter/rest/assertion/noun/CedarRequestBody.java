@@ -7,5 +7,5 @@ public interface CedarRequestBody extends CedarAssertionNoun {
 
   CedarParameter get(String name);
 
-  <T> T as(Class<T> type) throws CedarAssertionException;
+  <T> T convert(Class<T> type) throws CedarAssertionException;
 }

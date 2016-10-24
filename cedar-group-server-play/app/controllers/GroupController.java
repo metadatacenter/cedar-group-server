@@ -1,14 +1,13 @@
 package controllers;
 
+import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.constant.HttpConstants;
 import org.metadatacenter.model.folderserver.CedarFSGroup;
 import org.metadatacenter.model.response.FSGroupListResponse;
-import org.metadatacenter.rest.assertion.GenericAssertions;
 import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
-import org.metadatacenter.bridge.CedarDataServices;
-import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.rest.context.CedarRequestContext;
+import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.rest.exception.CedarAssertionException;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 import org.metadatacenter.rest.operation.CedarOperations;
@@ -18,19 +17,23 @@ import org.metadatacenter.server.result.BackendCallResult;
 import org.metadatacenter.server.security.model.auth.CedarGroupUser;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
-import org.metadatacenter.server.security.model.auth.CedarPermission;
 import play.mvc.Result;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.metadatacenter.rest.assertion.GenericAssertions.*;
+import static org.metadatacenter.server.security.model.auth.CedarPermission.*;
+
 public class GroupController extends AbstractPermissionServerController {
 
 
   public static Result findGroups() throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
-    c.must(c.user()).be(GenericAssertions.loggedIn);
+
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_READ);
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
     List<CedarFSGroup> groups = neoSession.findGroups();
@@ -43,26 +46,25 @@ public class GroupController extends AbstractPermissionServerController {
   public static Result createGroup() throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
-    c.must(c.user()).be(GenericAssertions.loggedIn);
-    c.must(c.user()).have(CedarPermission.GROUP_CREATE);
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_CREATE);
 
-    c.must(c.request()).be(GenericAssertions.jsonBody);
-    CedarRequestBody requestBody = c.request().getJsonBody();
+    CedarRequestBody requestBody = c.request().getRequestBody();
 
     CedarParameter groupName = requestBody.get("name");
     CedarParameter groupDescription = requestBody.get("description");
-    c.should(groupName, groupDescription).be(GenericAssertions.isNotNull).otherwiseBadRequest();
+    c.should(groupName, groupDescription).be(NonNull).otherwiseBadRequest();
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
 
     CedarFSGroup oldGroup = neoSession.findGroupByName(groupName.stringValue());
-    c.should(oldGroup).be(GenericAssertions.isNull).otherwiseBadRequest(
+    c.should(oldGroup).be(Null).otherwiseBadRequest(
         CedarOperations.lookup(CedarFSGroup.class, "name", groupName),
         "There is a group with the same name present in the system. Group names must be unique!");
 
     CedarFSGroup newGroup = neoSession.createGroup(groupName.stringValue(), groupName.stringValue(),
         groupDescription.stringValue());
-    c.should(newGroup).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+    c.should(newGroup).be(NonNull).otherwiseInternalServerError(
         CedarOperations.create(CedarFSGroup.class, "name", groupName),
         "There was an error while creating the group!"
     );
@@ -75,13 +77,13 @@ public class GroupController extends AbstractPermissionServerController {
   public static Result findGroup(String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
-    c.must(c.user()).be(GenericAssertions.loggedIn);
-    c.must(c.user()).have(CedarPermission.GROUP_READ);
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_READ);
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
 
     CedarFSGroup group = neoSession.findGroupById(id);
-    c.should(group).be(GenericAssertions.isNotNull).otherwiseNotFound(
+    c.should(group).be(NonNull).otherwiseNotFound(
         CedarOperations.lookup(CedarFSGroup.class, "id", id),
         "The group can not be found by id!");
 
@@ -91,18 +93,17 @@ public class GroupController extends AbstractPermissionServerController {
   public static Result updateGroup(String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
-    c.must(c.user()).be(GenericAssertions.loggedIn);
-    c.must(c.user()).have(CedarPermission.GROUP_UPDATE);
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_UPDATE);
 
-    c.must(c.request()).be(GenericAssertions.jsonBody);
-    CedarRequestBody requestBody = c.request().getJsonBody();
+    CedarRequestBody requestBody = c.request().getRequestBody();
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
     CedarFSGroup existingGroup = findNonSpecialGroupById(c, neoSession, id);
 
     CedarParameter groupName = requestBody.get("name");
     CedarParameter groupDescription = requestBody.get("description");
-    c.should(groupName, groupDescription).be(GenericAssertions.isNotNull).otherwiseBadRequest();
+    c.should(groupName, groupDescription).be(NonNull).otherwiseBadRequest();
 
     // check if the new name is unique
     CedarFSGroup otherGroup = neoSession.findGroupByName(groupName.stringValue());
@@ -114,7 +115,7 @@ public class GroupController extends AbstractPermissionServerController {
     updateFields.put(Neo4JFields.DESCRIPTION, groupDescription.stringValue());
     CedarFSGroup updatedGroup = neoSession.updateGroupById(id, updateFields);
 
-    c.should(updatedGroup).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+    c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
         CedarOperations.update(CedarFSGroup.class, "id", id),
         "There was an error while updating the group!"
     );
@@ -125,12 +126,12 @@ public class GroupController extends AbstractPermissionServerController {
   public static Result patchGroup(String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
-    c.must(c.user()).be(GenericAssertions.loggedIn);
-    c.must(c.user()).have(CedarPermission.GROUP_UPDATE);
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_UPDATE);
 
     //c.must(c.request()).be(GenericAssertions.jsonBody);
-    c.must(c.request()).be(GenericAssertions.jsonMergePatch);
-    CedarRequestBody requestBody = c.request().getJsonBody();
+    c.must(c.request()).be(JsonMergePatch);
+    CedarRequestBody requestBody = c.request().getRequestBody();
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
     CedarFSGroup existingGroup = findNonSpecialGroupById(c, neoSession, id);
@@ -161,7 +162,7 @@ public class GroupController extends AbstractPermissionServerController {
     }
     CedarFSGroup updatedGroup = neoSession.updateGroupById(id, updateFields);
 
-    c.should(updatedGroup).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+    c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
         CedarOperations.update(CedarFSGroup.class, "id", id),
         "There was an error while updating the group!"
     );
@@ -172,7 +173,7 @@ public class GroupController extends AbstractPermissionServerController {
   private static CedarFSGroup findNonSpecialGroupById(CedarRequestContext c, Neo4JUserSession neoSession, String id)
       throws CedarAssertionException {
     CedarFSGroup existingGroup = neoSession.findGroupById(id);
-    c.should(existingGroup).be(GenericAssertions.isNotNull).otherwiseNotFound(
+    c.should(existingGroup).be(NonNull).otherwiseNotFound(
         CedarOperations.lookup(CedarFSGroup.class, "id", id),
         "The group can not be found by id!"
     );
@@ -202,23 +203,23 @@ public class GroupController extends AbstractPermissionServerController {
   public static Result deleteGroup(String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
-    c.must(c.user()).be(GenericAssertions.loggedIn);
-    c.must(c.user()).have(CedarPermission.GROUP_DELETE);
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_DELETE);
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
     CedarFSGroup existingGroup = neoSession.findGroupById(id);
 
-    c.should(existingGroup).be(GenericAssertions.isNotNull).otherwiseNotFound(
+    c.should(existingGroup).be(NonNull).otherwiseNotFound(
         CedarOperations.lookup(CedarFSGroup.class, "id", id),
         "The group can not be found by id!");
 
     String specialGroup = existingGroup.getSpecialGroup();
-    c.should(specialGroup).be(GenericAssertions.isNull).otherwiseBadRequest(
+    c.should(specialGroup).be(Null).otherwiseBadRequest(
         CedarOperations.delete(CedarFSGroup.class, "id", id),
         "The special group '" + specialGroup + "'can not be deleted!");
 
     boolean deleted = neoSession.deleteGroupById(id);
-    c.should(deleted).be(GenericAssertions.isTrue).otherwiseInternalServerError(
+    c.should(deleted).be(True).otherwiseInternalServerError(
         CedarOperations.delete(CedarFSGroup.class, "id", id),
         "There was an error while deleting the group!"
     );
@@ -229,18 +230,18 @@ public class GroupController extends AbstractPermissionServerController {
   public static Result getGroupMembers(String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
-    c.must(c.user()).be(GenericAssertions.loggedIn);
-    c.must(c.user()).have(CedarPermission.GROUP_READ);
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_READ);
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
 
     CedarFSGroup group = neoSession.findGroupById(id);
-    c.should(group).be(GenericAssertions.isNotNull).otherwiseNotFound(
+    c.should(group).be(NonNull).otherwiseNotFound(
         CedarOperations.lookup(CedarFSGroup.class, "id", id),
         "The group can not be found by id!");
 
     CedarGroupUsers groupUsers = neoSession.findGroupUsers(id);
-    c.should(groupUsers).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+    c.should(groupUsers).be(NonNull).otherwiseInternalServerError(
         CedarOperations.list(CedarFSGroup.class, "id", id),
         "There was an error while listing the group users!"
     );
@@ -250,37 +251,37 @@ public class GroupController extends AbstractPermissionServerController {
   public static Result updateGroupMembers(String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
-    c.must(c.user()).be(GenericAssertions.loggedIn);
-    c.must(c.user()).have(CedarPermission.GROUP_UPDATE);
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_UPDATE);
 
     Neo4JUserSession neoSession = CedarDataServices.getNeo4jSession(c);
 
     CedarFSGroup group = neoSession.findGroupById(id);
-    c.should(group).be(GenericAssertions.isNotNull).otherwiseNotFound(
+    c.should(group).be(NonNull).otherwiseNotFound(
         CedarOperations.lookup(CedarFSGroup.class, "id", id),
         "The group can not be found by id!");
 
     CedarGroupUsers groupUsers = neoSession.findGroupUsers(id);
-    c.should(groupUsers).be(GenericAssertions.isNotNull).otherwiseInternalServerError(
+    c.should(groupUsers).be(NonNull).otherwiseInternalServerError(
         CedarOperations.list(CedarFSGroup.class, "id", id),
         "There was an error while listing the group users!"
     );
 
     String currentUserId = neoSession.getUserId();
     boolean currentUserIsGroupAdmin = false;
-    for(CedarGroupUser user : groupUsers.getUsers()) {
+    for (CedarGroupUser user : groupUsers.getUsers()) {
       if (currentUserId.equals(user.getUser().getId()) && user.isAdministrator()) {
         currentUserIsGroupAdmin = true;
         break;
       }
     }
 
-    c.should(currentUserIsGroupAdmin).be(GenericAssertions.isTrue).otherwiseForbidden(
+    c.should(currentUserIsGroupAdmin).be(True).otherwiseForbidden(
         CedarOperations.update(CedarFSGroup.class, "id", id),
         "Only the administrators can update the group!");
 
-    CedarRequestBody requestBody = c.request().getJsonBody();
-    CedarGroupUsersRequest usersRequest = requestBody.as(CedarGroupUsersRequest.class);
+    CedarRequestBody requestBody = c.request().getRequestBody();
+    CedarGroupUsersRequest usersRequest = requestBody.convert(CedarGroupUsersRequest.class);
 
     BackendCallResult backendCallResult = neoSession.updateGroupUsers(id, usersRequest);
     //TODO : implement this instead of the if

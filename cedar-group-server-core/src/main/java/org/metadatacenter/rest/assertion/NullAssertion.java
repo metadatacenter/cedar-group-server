@@ -5,9 +5,9 @@ import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 
-public class IsNull implements CedarAssertion {
+public class NullAssertion implements CedarAssertion {
 
-  IsNull() {
+  NullAssertion() {
   }
 
   @Override

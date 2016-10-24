@@ -2,6 +2,7 @@ package org.metadatacenter.rest.context;
 
 public enum CedarParameterSource {
 
+  EmptyBody("EmptyBody"),
   JsonBody("JsonBody"),
   QueryString("QueryString");
 

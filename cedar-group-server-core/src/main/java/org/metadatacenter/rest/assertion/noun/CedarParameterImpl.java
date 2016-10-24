@@ -3,7 +3,7 @@ package org.metadatacenter.rest.assertion.noun;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.metadatacenter.rest.context.CedarParameterSource;
 
-public class CedarParameterImpl extends ParameterNoun {
+public class CedarParameterImpl extends CedarParameterNoun {
 
   private final String name;
   private final CedarParameterSource source;

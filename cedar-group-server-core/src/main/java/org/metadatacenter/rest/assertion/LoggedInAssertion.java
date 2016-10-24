@@ -1,23 +1,23 @@
 package org.metadatacenter.rest.assertion;
 
 import org.metadatacenter.rest.CedarAssertionNoun;
-import org.metadatacenter.rest.assertion.noun.UserNoun;
+import org.metadatacenter.rest.assertion.noun.CedarUserNoun;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 import org.metadatacenter.server.security.model.user.CedarUser;
 
-public class LoggedIn implements CedarAssertion {
+public class LoggedInAssertion implements CedarAssertion {
 
-  LoggedIn() {
+  LoggedInAssertion() {
   }
 
   @Override
   public CedarAssertionResult check(CedarRequestContext requestContext, CedarAssertionNoun target) {
-    if (!(target instanceof UserNoun)) {
+    if (!(target instanceof CedarUserNoun)) {
       return new CedarAssertionResult("Only instances of CedarUserNoun can be checked with this assertion");
     }
-    UserNoun cedarUserNoun = (UserNoun) target;
+    CedarUserNoun cedarUserNoun = (CedarUserNoun) target;
     //noinspection ConstantConditions
     CedarUser user = cedarUserNoun.getUser();
     if (user != null) {

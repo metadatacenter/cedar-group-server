@@ -5,9 +5,9 @@ import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 
-public class NonEmpty implements CedarAssertion {
+public class NonEmptyAssertion implements CedarAssertion {
 
-  NonEmpty() {
+  NonEmptyAssertion() {
   }
 
   @Override

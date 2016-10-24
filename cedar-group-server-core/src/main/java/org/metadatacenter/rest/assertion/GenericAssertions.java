@@ -1,11 +1,10 @@
 package org.metadatacenter.rest.assertion;
 
 public class GenericAssertions {
-  public static LoggedIn loggedIn = new LoggedIn();
-  public static JsonBody jsonBody = new JsonBody();
-  public static NonEmpty nonEmpty = new NonEmpty();
-  public static IsNull isNull = new IsNull();
-  public static IsNotNull isNotNull = new IsNotNull();
-  public static CedarAssertion jsonMergePatch = new JsonMergePatch();
-  public static CedarAssertion isTrue = new IsTrue();
+  public static final LoggedInAssertion LoggedIn = new LoggedInAssertion();
+  public static final NonEmptyAssertion NonEmpty = new NonEmptyAssertion();
+  public static final NullAssertion Null = new NullAssertion();
+  public static final NonNullAssertion NonNull = new NonNullAssertion();
+  public static final CedarAssertion JsonMergePatch = new JsonMergePatchAssertion();
+  public static final CedarAssertion True = new TrueAssertion();
 }

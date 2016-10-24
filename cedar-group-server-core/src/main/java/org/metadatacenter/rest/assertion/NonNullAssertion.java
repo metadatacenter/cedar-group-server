@@ -5,9 +5,9 @@ import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 
-public class IsNotNull implements CedarAssertion {
+public class NonNullAssertion implements CedarAssertion {
 
-  IsNotNull() {
+  NonNullAssertion() {
   }
 
   @Override

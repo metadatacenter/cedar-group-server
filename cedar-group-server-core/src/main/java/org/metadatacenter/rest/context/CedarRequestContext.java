@@ -8,6 +8,7 @@ import org.metadatacenter.rest.assertion.assertiontarget.AssertionPOJOTargetPres
 import org.metadatacenter.rest.assertion.noun.CedarRequest;
 import org.metadatacenter.rest.assertion.noun.CedarAssertionUser;
 import org.metadatacenter.server.security.model.AuthRequest;
+import org.metadatacenter.server.security.model.user.CedarUser;
 
 public interface CedarRequestContext {
 
@@ -25,5 +26,5 @@ public interface CedarRequestContext {
 
   AssertionPOJOTargetPresent must(Object... objects);
 
-  org.metadatacenter.server.security.model.user.CedarUser getCedarUser();
+  CedarUser getCedarUser();
 }

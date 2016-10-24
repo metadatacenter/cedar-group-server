@@ -12,6 +12,10 @@ public class PlayRequestJsonBody implements CedarRequestBody {
 
   private final JsonNode bodyNode;
 
+  public PlayRequestJsonBody() {
+    bodyNode = null;
+  }
+
   public PlayRequestJsonBody(JsonNode bodyNode) {
     this.bodyNode = bodyNode;
   }
@@ -29,7 +33,7 @@ public class PlayRequestJsonBody implements CedarRequestBody {
   }
 
   @Override
-  public <T> T as(Class<T> type) throws CedarAssertionException {
+  public <T> T convert(Class<T> type) throws CedarAssertionException {
     T object;
     try {
       object = JsonMapper.MAPPER.treeToValue(bodyNode, type);

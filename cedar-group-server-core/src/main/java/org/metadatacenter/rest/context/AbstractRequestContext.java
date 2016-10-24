@@ -13,12 +13,6 @@ public abstract class AbstractRequestContext implements CedarRequestContext {
   protected CedarRequest wrappedRequest;
   protected AuthRequest authRequest;
 
-  protected void initialize() {
-    initializeLocal();
-  }
-
-  abstract void initializeLocal();
-
   @Override
   public CedarAssertionUser user() {
     return user;

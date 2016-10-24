@@ -4,9 +4,9 @@ import org.metadatacenter.rest.CedarAssertionNoun;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 
-public class IsTrue implements CedarAssertion {
+public class TrueAssertion implements CedarAssertion {
 
-  IsTrue() {
+  TrueAssertion() {
   }
 
   @Override
