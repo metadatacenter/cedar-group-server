@@ -12,10 +12,9 @@ import org.metadatacenter.rest.exception.CedarAssertionException;
 import org.metadatacenter.rest.exception.CedarAssertionResult;
 import org.metadatacenter.rest.operation.CedarOperations;
 import org.metadatacenter.server.GroupServiceSession;
+import org.metadatacenter.server.PermissionServiceSession;
 import org.metadatacenter.server.neo4j.Neo4JFields;
-import org.metadatacenter.server.neo4j.Neo4JUserSession;
 import org.metadatacenter.server.result.BackendCallResult;
-import org.metadatacenter.server.security.model.auth.CedarGroupUser;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
 import play.mvc.Result;
@@ -71,6 +70,7 @@ public class GroupController extends AbstractPermissionServerController {
     );
 
     String absoluteUrl = routes.GroupController.findGroup(newGroup.getId()).absoluteURL(request());
+    //addLocationHeader(absoluteUrl);
     response().setHeader(HttpConstants.HTTP_HEADER_LOCATION, absoluteUrl);
     return created(asJson(newGroup));
   }
@@ -87,6 +87,11 @@ public class GroupController extends AbstractPermissionServerController {
     c.should(group).be(NonNull).otherwiseNotFound(
         CedarOperations.lookup(FolderServerGroup.class, "id", id),
         "The group can not be found by id!");
+
+    // BackendCallResult<FolderServerGroup> bcr = groupSession.findGroupById(id);
+    // c.must(backendCallResult).be(Successful);
+    // c.must(backendCallResult).be(Found);
+    // FolderServerGroup group = bcr.get();
 
     return ok(asJson(group));
   }
@@ -120,6 +125,10 @@ public class GroupController extends AbstractPermissionServerController {
         CedarOperations.update(FolderServerGroup.class, "id", id),
         "There was an error while updating the group!"
     );
+
+    // BackendCallResult<FolderServerGroup> bcr = groupSession.updateGroup(c, groupSession, id, updateFields);
+    // c.must(backendCallResult).be(Successful); // InternalServerError, 404 NotFound, 403 Forbidden if special
+    // FolderServerGroup existingGroup = bcr.get();
 
     return ok(asJson(updatedGroup));
   }
@@ -256,28 +265,16 @@ public class GroupController extends AbstractPermissionServerController {
     c.must(c.user()).have(GROUP_UPDATE);
 
     GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    PermissionServiceSession permissionSession = CedarDataServices.getPermissionServiceSession(c);
 
     FolderServerGroup group = groupSession.findGroupById(id);
     c.should(group).be(NonNull).otherwiseNotFound(
         CedarOperations.lookup(FolderServerGroup.class, "id", id),
         "The group can not be found by id!");
 
-    CedarGroupUsers groupUsers = groupSession.findGroupUsers(id);
-    c.should(groupUsers).be(NonNull).otherwiseInternalServerError(
-        CedarOperations.list(FolderServerGroup.class, "id", id),
-        "There was an error while listing the group users!"
-    );
 
-    String currentUserId = groupSession.getUserId();
-    boolean currentUserIsGroupAdmin = false;
-    for (CedarGroupUser user : groupUsers.getUsers()) {
-      if (currentUserId.equals(user.getUser().getId()) && user.isAdministrator()) {
-        currentUserIsGroupAdmin = true;
-        break;
-      }
-    }
-
-    c.should(currentUserIsGroupAdmin).be(True).otherwiseForbidden(
+    boolean isAdministrator = permissionSession.userAdministersGroup(id);
+    c.should(isAdministrator).be(True).otherwiseForbidden(
         CedarOperations.update(FolderServerGroup.class, "id", id),
         "Only the administrators can update the group!");
 
@@ -285,13 +282,7 @@ public class GroupController extends AbstractPermissionServerController {
     CedarGroupUsersRequest usersRequest = requestBody.convert(CedarGroupUsersRequest.class);
 
     BackendCallResult backendCallResult = groupSession.updateGroupUsers(id, usersRequest);
-    //TODO : implement this instead of the if
-    // c.backend(backendCallResult);
-    // or
-    // c.backend(neoSession.updateGroupUsers(id, usersRequest));
-    if (backendCallResult.isError()) {
-      return backendCallError(backendCallResult);
-    }
+    c.must(backendCallResult).be(Successful);
 
     CedarGroupUsers updatedGroupUsers = groupSession.findGroupUsers(id);
     return ok(asJson(updatedGroupUsers));

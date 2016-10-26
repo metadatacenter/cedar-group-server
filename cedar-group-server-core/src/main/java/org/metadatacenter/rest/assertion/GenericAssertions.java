@@ -7,4 +7,5 @@ public class GenericAssertions {
   public static final NonNullAssertion NonNull = new NonNullAssertion();
   public static final CedarAssertion JsonMergePatch = new JsonMergePatchAssertion();
   public static final CedarAssertion True = new TrueAssertion();
+  public static final SuccessfulAssertion Successful = new SuccessfulAssertion();
 }

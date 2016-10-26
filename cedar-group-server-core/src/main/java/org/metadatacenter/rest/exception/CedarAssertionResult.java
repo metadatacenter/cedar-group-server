@@ -1,5 +1,7 @@
 package org.metadatacenter.rest.exception;
 
+import org.metadatacenter.server.result.BackendCallResult;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,6 +24,12 @@ public class CedarAssertionResult {
     this.message = message;
     code = HTTP_INTERNAL_SERVER_ERROR;
     parameters = new HashMap<>();
+  }
+
+  public CedarAssertionResult(BackendCallResult backendCallResult) {
+    this(backendCallResult.getFirstErrorMessage());
+    // TODO : implement this. Data from backendCallResult should make into CedarAssertionResult
+    // implementation sample is in AbstractCedarController.putErrorDetails
   }
 
   public CedarAssertionResult internalServerError() {
