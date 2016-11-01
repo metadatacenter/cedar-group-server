@@ -30,18 +30,18 @@ public class GroupController extends AbstractPermissionServerController {
 
 
   public static Result findGroups() throws CedarAssertionException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+      CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
 
-    c.must(c.user()).be(LoggedIn);
-    c.must(c.user()).have(GROUP_READ);
+      c.must(c.user()).be(LoggedIn);
+      c.must(c.user()).have(GROUP_READ);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
-    List<FolderServerGroup> groups = groupSession.findGroups();
+      GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+      List<FolderServerGroup> groups = groupSession.findGroups();
 
-    FolderServerGroupListResponse r = new FolderServerGroupListResponse();
-    r.setGroups(groups);
-    return ok(asJson(r));
-  }
+      FolderServerGroupListResponse r = new FolderServerGroupListResponse();
+      r.setGroups(groups);
+      return ok(asJson(r));
+    }
 
   public static Result createGroup() throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
@@ -265,7 +265,6 @@ public class GroupController extends AbstractPermissionServerController {
     c.must(c.user()).have(GROUP_UPDATE);
 
     GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
-    PermissionServiceSession permissionSession = CedarDataServices.getPermissionServiceSession(c);
 
     FolderServerGroup group = groupSession.findGroupById(id);
     c.should(group).be(NonNull).otherwiseNotFound(
@@ -273,7 +272,7 @@ public class GroupController extends AbstractPermissionServerController {
         "The group can not be found by id!");
 
 
-    boolean isAdministrator = permissionSession.userAdministersGroup(id);
+    boolean isAdministrator = groupSession.userAdministersGroup(id);
     c.should(isAdministrator).be(True).otherwiseForbidden(
         CedarOperations.update(FolderServerGroup.class, "id", id),
         "Only the administrators can update the group!");

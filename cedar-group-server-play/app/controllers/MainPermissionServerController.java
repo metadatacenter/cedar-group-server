@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.metadatacenter.server.play.AbstractCedarController;
 import play.mvc.Result;
 
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 
 public class MainPermissionServerController extends AbstractPermissionServerController {
 
