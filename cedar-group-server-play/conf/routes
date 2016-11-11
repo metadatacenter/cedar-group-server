@@ -1,0 +1,22 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET            /                                          controllers.MainPermissionServerController.index()
+
+# Groups
+POST           /groups                                    controllers.GroupController.createGroup()
+GET            /groups                                    controllers.GroupController.findGroups()
+GET            /groups/:id                                controllers.GroupController.findGroup(id: String)
+PATCH          /groups/:id                                controllers.GroupController.patchGroup(id: String)
+PUT            /groups/:id                                controllers.GroupController.updateGroup(id: String)
+DELETE         /groups/:id                                controllers.GroupController.deleteGroup(id: String)
+GET            /groups/:id/users                          controllers.GroupController.getGroupMembers(id: String)
+PUT            /groups/:id/users                          controllers.GroupController.updateGroupMembers(id: String)
+
+# For CORS - preflight request
+OPTIONS        /*all                                      controllers.MainPermissionServerController.preflight(all)
+
+## Map static resources from the /public folder to the /assets URL path
+GET            /assets/*file                              controllers.Assets.at(path="/public", file)
