@@ -5,6 +5,7 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.metadatacenter.bridge.CedarDataServices;
+import org.metadatacenter.cedar.group.core.CedarAssertionExceptionMapper;
 import org.metadatacenter.cedar.group.health.GroupServerHealthCheck;
 import org.metadatacenter.cedar.group.resources.GroupsResource;
 import org.metadatacenter.cedar.group.resources.IndexResource;
@@ -49,6 +50,9 @@ public class GroupServerApplication extends Application<GroupServerConfiguration
 
     final GroupServerHealthCheck healthCheck = new GroupServerHealthCheck();
     environment.healthChecks().register("message", healthCheck);
+
+
+    environment.jersey().register(new CedarAssertionExceptionMapper());
 
     // Enable CORS headers
     final FilterRegistration.Dynamic cors = environment.servlets().addFilter("CORS", CrossOriginFilter.class);
