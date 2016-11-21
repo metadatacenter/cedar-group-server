@@ -17,11 +17,6 @@
   <name>CEDAR Group Server</name>
   <description>CEDAR server to manage Groups</description>
 
-  <properties>
-    <!-- Do Not Remove This! We need it in Pom.scala -->
-    <scala.version>2.11.5</scala.version>
-  </properties>
-
   <scm>
     <connection>scm:git:git@github.com:metadatacenter/cedar-group-server.git</connection>
     <developerConnection>scm:git:git@github.com:metadatacenter/cedar-group-server.git</developerConnection>
@@ -31,7 +26,6 @@
 
   <modules>
     <module>cedar-group-server-core</module>
-    <module>cedar-group-server-play</module>
     <module>cedar-group-server-application</module>
   </modules>
 
