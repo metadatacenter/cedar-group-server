@@ -38,6 +38,7 @@ public class GroupsResource {
   @Context
   UriInfo uriInfo;
 
+  private
   @Context
   HttpServletRequest request;
 
@@ -46,7 +47,7 @@ public class GroupsResource {
 
   @GET
   @Timed
-  public Response findGroups(@Context HttpServletRequest request) throws CedarAssertionException {
+  public Response findGroups() throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -63,7 +64,7 @@ public class GroupsResource {
 
   @POST
   @Timed
-  public Response createGroup(@Context HttpServletRequest request) throws CedarAssertionException {
+  public Response createGroup() throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -103,7 +104,7 @@ public class GroupsResource {
   @GET
   @Timed
   @Path("/{id}")
-  public static Response findGroup(@PathParam("id") String id, @Context HttpServletRequest request) throws
+  public Response findGroup(@PathParam("id") String id) throws
       CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
@@ -128,7 +129,7 @@ public class GroupsResource {
   @PUT
   @Timed
   @Path("/{id}")
-  public static Response updateGroup(@PathParam("id") String id, @Context HttpServletRequest request) throws
+  public Response updateGroup(@PathParam("id") String id) throws
       CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
@@ -199,7 +200,7 @@ public class GroupsResource {
   @DELETE
   @Timed
   @Path("/{id}")
-  public static Response deleteGroup(@PathParam("id") String id, @Context HttpServletRequest request) throws
+  public Response deleteGroup(@PathParam("id") String id) throws
       CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
@@ -230,7 +231,7 @@ public class GroupsResource {
   @GET
   @Timed
   @Path("/{id}/users")
-  public static Response getGroupMembers(@PathParam("id") String id, @Context HttpServletRequest request) throws
+  public Response getGroupMembers(@PathParam("id") String id) throws
       CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
@@ -256,7 +257,7 @@ public class GroupsResource {
   @PUT
   @Timed
   @Path("/{id}/users")
-  public static Response updateGroupMembers(@PathParam("id") String id, @Context HttpServletRequest request) throws
+  public Response updateGroupMembers(@PathParam("id") String id) throws
       CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
@@ -291,7 +292,7 @@ public class GroupsResource {
   @Timed
   @Path("/{id}")
   @Consumes("application/merge-patch+json")
-  public static Response patchGroup(@PathParam("id") String id, @Context HttpServletRequest request) throws
+  public Response patchGroup(@PathParam("id") String id) throws
       CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 

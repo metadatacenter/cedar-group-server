@@ -51,7 +51,6 @@ public class GroupServerApplication extends Application<GroupServerConfiguration
     final GroupServerHealthCheck healthCheck = new GroupServerHealthCheck();
     environment.healthChecks().register("message", healthCheck);
 
-
     environment.jersey().register(new CedarAssertionExceptionMapper());
 
     // Enable CORS headers
