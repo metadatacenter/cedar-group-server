@@ -104,8 +104,7 @@ public class GroupsResource {
   @GET
   @Timed
   @Path("/{id}")
-  public Response findGroup(@PathParam("id") String id) throws
-      CedarAssertionException {
+  public Response findGroup(@PathParam("id") String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -129,8 +128,7 @@ public class GroupsResource {
   @PUT
   @Timed
   @Path("/{id}")
-  public Response updateGroup(@PathParam("id") String id) throws
-      CedarAssertionException {
+  public Response updateGroup(@PathParam("id") String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -200,8 +198,7 @@ public class GroupsResource {
   @DELETE
   @Timed
   @Path("/{id}")
-  public Response deleteGroup(@PathParam("id") String id) throws
-      CedarAssertionException {
+  public Response deleteGroup(@PathParam("id") String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -231,8 +228,7 @@ public class GroupsResource {
   @GET
   @Timed
   @Path("/{id}/users")
-  public Response getGroupMembers(@PathParam("id") String id) throws
-      CedarAssertionException {
+  public Response getGroupMembers(@PathParam("id") String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -257,8 +253,7 @@ public class GroupsResource {
   @PUT
   @Timed
   @Path("/{id}/users")
-  public Response updateGroupMembers(@PathParam("id") String id) throws
-      CedarAssertionException {
+  public Response updateGroupMembers(@PathParam("id") String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -292,8 +287,7 @@ public class GroupsResource {
   @Timed
   @Path("/{id}")
   @Consumes("application/merge-patch+json")
-  public Response patchGroup(@PathParam("id") String id) throws
-      CedarAssertionException {
+  public Response patchGroup(@PathParam("id") String id) throws CedarAssertionException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
