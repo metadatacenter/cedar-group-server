@@ -3,6 +3,9 @@ package org.metadatacenter.cedar.group.resources;
 import com.codahale.metrics.annotation.Timed;
 import io.dropwizard.jersey.PATCH;
 import org.metadatacenter.bridge.CedarDataServices;
+import org.metadatacenter.exception.CedarBackendException;
+import org.metadatacenter.exception.CedarException;
+import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.model.folderserver.FolderServerGroup;
 import org.metadatacenter.model.response.FolderServerGroupListResponse;
 import org.metadatacenter.rest.assertion.noun.CedarParameter;
@@ -10,19 +13,19 @@ import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.rest.exception.CedarAssertionException;
-import org.metadatacenter.rest.exception.CedarAssertionResult;
-import org.metadatacenter.rest.operation.CedarOperations;
+import org.metadatacenter.error.CedarAssertionResult;
+import org.metadatacenter.operation.CedarOperations;
 import org.metadatacenter.server.GroupServiceSession;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.result.BackendCallResult;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
+import org.metadatacenter.util.http.CedarUrlUtil;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,14 +93,8 @@ public class GroupsResource {
         "There was an error while creating the group!"
     );
 
-    // TODO: this is way too much for a URL ENCODE
     UriBuilder builder = uriInfo.getAbsolutePathBuilder();
-    URI uri = null;
-    try {
-      uri = builder.path(URLEncoder.encode(newGroup.getId(), "UTF-8")).build();
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+    URI uri = builder.path(CedarUrlUtil.urlEncode(newGroup.getId())).build();
     return Response.created(uri).entity(newGroup).build();
   }
 
@@ -128,7 +125,7 @@ public class GroupsResource {
   @PUT
   @Timed
   @Path("/{id}")
-  public Response updateGroup(@PathParam("id") String id) throws CedarAssertionException {
+  public Response updateGroup(@PathParam("id") String id) throws CedarException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -166,19 +163,19 @@ public class GroupsResource {
   }
 
   private static void checkUniqueness(FolderServerGroup otherGroup, FolderServerGroup existingGroup) throws
-      CedarAssertionException {
+      CedarException {
     if (otherGroup != null && !otherGroup.getId().equals(existingGroup.getId())) {
       CedarAssertionResult ar = new CedarAssertionResult(
           "There is a group with the new name present in the system. Group names must be unique!")
-          .setParameter("name", otherGroup.getName())
-          .setParameter("id", otherGroup.getId())
+          .parameter("name", otherGroup.getName())
+          .parameter("id", otherGroup.getId())
           .badRequest();
-      throw new CedarAssertionException(ar);
+      throw new CedarBackendException(ar);
     }
   }
 
   private static FolderServerGroup findNonSpecialGroupById(CedarRequestContext c, GroupServiceSession groupSession,
-                                                           String id) throws CedarAssertionException {
+                                                           String id) throws CedarException {
     FolderServerGroup existingGroup = groupSession.findGroupById(id);
     c.should(existingGroup).be(NonNull).otherwiseNotFound(
         CedarOperations.lookup(FolderServerGroup.class, "id", id),
@@ -187,10 +184,10 @@ public class GroupsResource {
 
     if (existingGroup.getSpecialGroup() != null) {
       CedarAssertionResult ar = new CedarAssertionResult("Special groups can not be modified!")
-          .setParameter("id", id)
-          .setParameter("specialGroup", existingGroup.getSpecialGroup())
+          .parameter("id", id)
+          .parameter("specialGroup", existingGroup.getSpecialGroup())
           .badRequest();
-      throw new CedarAssertionException(ar);
+      throw new CedarBackendException(ar);
     }
     return existingGroup;
   }
@@ -287,7 +284,7 @@ public class GroupsResource {
   @Timed
   @Path("/{id}")
   @Consumes("application/merge-patch+json")
-  public Response patchGroup(@PathParam("id") String id) throws CedarAssertionException {
+  public Response patchGroup(@PathParam("id") String id) throws CedarException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
