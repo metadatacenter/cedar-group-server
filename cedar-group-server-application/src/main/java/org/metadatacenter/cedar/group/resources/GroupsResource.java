@@ -67,7 +67,7 @@ public class GroupsResource {
 
   @POST
   @Timed
-  public Response createGroup() throws CedarAssertionException {
+  public Response createGroup() throws CedarException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -250,7 +250,7 @@ public class GroupsResource {
   @PUT
   @Timed
   @Path("/{id}/users")
-  public Response updateGroupMembers(@PathParam("id") String id) throws CedarAssertionException {
+  public Response updateGroupMembers(@PathParam("id") String id) throws CedarException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
