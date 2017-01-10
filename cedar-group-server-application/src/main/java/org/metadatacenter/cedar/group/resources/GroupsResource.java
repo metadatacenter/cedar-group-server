@@ -3,18 +3,16 @@ package org.metadatacenter.cedar.group.resources;
 import com.codahale.metrics.annotation.Timed;
 import io.dropwizard.jersey.PATCH;
 import org.metadatacenter.bridge.CedarDataServices;
+import org.metadatacenter.error.CedarAssertionResult;
 import org.metadatacenter.exception.CedarBackendException;
 import org.metadatacenter.exception.CedarException;
-import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.model.folderserver.FolderServerGroup;
 import org.metadatacenter.model.response.FolderServerGroupListResponse;
+import org.metadatacenter.operation.CedarOperations;
 import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.context.CedarRequestContextFactory;
-import org.metadatacenter.rest.exception.CedarAssertionException;
-import org.metadatacenter.error.CedarAssertionResult;
-import org.metadatacenter.operation.CedarOperations;
 import org.metadatacenter.server.GroupServiceSession;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.result.BackendCallResult;
@@ -50,7 +48,7 @@ public class GroupsResource {
 
   @GET
   @Timed
-  public Response findGroups() throws CedarAssertionException {
+  public Response findGroups() throws CedarException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -101,7 +99,7 @@ public class GroupsResource {
   @GET
   @Timed
   @Path("/{id}")
-  public Response findGroup(@PathParam("id") String id) throws CedarAssertionException {
+  public Response findGroup(@PathParam("id") String id) throws CedarException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -195,7 +193,7 @@ public class GroupsResource {
   @DELETE
   @Timed
   @Path("/{id}")
-  public Response deleteGroup(@PathParam("id") String id) throws CedarAssertionException {
+  public Response deleteGroup(@PathParam("id") String id) throws CedarException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
@@ -225,7 +223,7 @@ public class GroupsResource {
   @GET
   @Timed
   @Path("/{id}/users")
-  public Response getGroupMembers(@PathParam("id") String id) throws CedarAssertionException {
+  public Response getGroupMembers(@PathParam("id") String id) throws CedarException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
