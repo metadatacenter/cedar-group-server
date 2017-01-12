@@ -1,24 +1,29 @@
-package controllers;
+package org.metadatacenter.cedar.group.resources;
 
+import com.codahale.metrics.annotation.Timed;
+import io.dropwizard.jersey.PATCH;
 import org.metadatacenter.bridge.CedarDataServices;
-import org.metadatacenter.constant.HttpConstants;
+import org.metadatacenter.error.CedarAssertionResult;
+import org.metadatacenter.exception.CedarBackendException;
+import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.model.folderserver.FolderServerGroup;
 import org.metadatacenter.model.response.FolderServerGroupListResponse;
+import org.metadatacenter.operation.CedarOperations;
 import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.context.CedarRequestContextFactory;
-import org.metadatacenter.rest.exception.CedarAssertionException;
-import org.metadatacenter.rest.exception.CedarAssertionResult;
-import org.metadatacenter.rest.operation.CedarOperations;
 import org.metadatacenter.server.GroupServiceSession;
-import org.metadatacenter.server.PermissionServiceSession;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.result.BackendCallResult;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
-import play.mvc.Result;
+import org.metadatacenter.util.http.CedarUrlUtil;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.*;
+import javax.ws.rs.core.*;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,25 +31,42 @@ import java.util.Map;
 import static org.metadatacenter.rest.assertion.GenericAssertions.*;
 import static org.metadatacenter.server.security.model.auth.CedarPermission.*;
 
-public class GroupController extends AbstractPermissionServerController {
+@Path("/groups")
+@Produces(MediaType.APPLICATION_JSON)
+public class GroupsResource {
 
+  private
+  @Context
+  UriInfo uriInfo;
 
-  public static Result findGroups() throws CedarAssertionException {
-      CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+  private
+  @Context
+  HttpServletRequest request;
 
-      c.must(c.user()).be(LoggedIn);
-      c.must(c.user()).have(GROUP_READ);
+  public GroupsResource() {
+  }
 
-      GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
-      List<FolderServerGroup> groups = groupSession.findGroups();
+  @GET
+  @Timed
+  public Response findGroups() throws CedarException {
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
-      FolderServerGroupListResponse r = new FolderServerGroupListResponse();
-      r.setGroups(groups);
-      return ok(asJson(r));
-    }
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_READ);
 
-  public static Result createGroup() throws CedarAssertionException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    List<FolderServerGroup> groups = groupSession.findGroups();
+
+    FolderServerGroupListResponse r = new FolderServerGroupListResponse();
+    r.setGroups(groups);
+
+    return Response.ok().entity(r).build();
+  }
+
+  @POST
+  @Timed
+  public Response createGroup() throws CedarException {
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_CREATE);
@@ -69,14 +91,16 @@ public class GroupController extends AbstractPermissionServerController {
         "There was an error while creating the group!"
     );
 
-    String absoluteUrl = routes.GroupController.findGroup(newGroup.getId()).absoluteURL(request());
-    //addLocationHeader(absoluteUrl);
-    response().setHeader(HttpConstants.HTTP_HEADER_LOCATION, absoluteUrl);
-    return created(asJson(newGroup));
+    UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+    URI uri = builder.path(CedarUrlUtil.urlEncode(newGroup.getId())).build();
+    return Response.created(uri).entity(newGroup).build();
   }
 
-  public static Result findGroup(String id) throws CedarAssertionException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+  @GET
+  @Timed
+  @Path("/{id}")
+  public Response findGroup(@PathParam("id") String id) throws CedarException {
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
@@ -93,11 +117,14 @@ public class GroupController extends AbstractPermissionServerController {
     // c.must(backendCallResult).be(Found);
     // FolderServerGroup group = bcr.get();
 
-    return ok(asJson(group));
+    return Response.ok().entity(group).build();
   }
 
-  public static Result updateGroup(String id) throws CedarAssertionException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+  @PUT
+  @Timed
+  @Path("/{id}")
+  public Response updateGroup(@PathParam("id") String id) throws CedarException {
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_UPDATE);
@@ -130,58 +157,23 @@ public class GroupController extends AbstractPermissionServerController {
     // c.must(backendCallResult).be(Successful); // InternalServerError, 404 NotFound, 403 Forbidden if special
     // FolderServerGroup existingGroup = bcr.get();
 
-    return ok(asJson(updatedGroup));
+    return Response.ok().entity(updatedGroup).build();
   }
 
-  public static Result patchGroup(String id) throws CedarAssertionException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
-
-    c.must(c.user()).be(LoggedIn);
-    c.must(c.user()).have(GROUP_UPDATE);
-
-    //c.must(c.request()).be(GenericAssertions.jsonBody);
-    c.must(c.request()).be(JsonMergePatch);
-    CedarRequestBody requestBody = c.request().getRequestBody();
-
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
-    FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, id);
-
-    CedarParameter groupName = requestBody.get("name");
-    CedarParameter groupDescription = requestBody.get("description");
-
-    boolean updateName = existingGroup.getName().equals(groupName.stringValue());
-    boolean updateDescription = existingGroup.getDescription().equals(groupDescription.stringValue());
-
-    if (!updateName && !updateDescription) {
-      return ok(asJson(existingGroup));
+  private static void checkUniqueness(FolderServerGroup otherGroup, FolderServerGroup existingGroup) throws
+      CedarException {
+    if (otherGroup != null && !otherGroup.getId().equals(existingGroup.getId())) {
+      CedarAssertionResult ar = new CedarAssertionResult(
+          "There is a group with the new name present in the system. Group names must be unique!")
+          .parameter("name", otherGroup.getName())
+          .parameter("id", otherGroup.getId())
+          .badRequest();
+      throw new CedarBackendException(ar);
     }
-
-    // check if the new name is unique
-    if (updateName) {
-      FolderServerGroup otherGroup = groupSession.findGroupByName(groupName.stringValue());
-      checkUniqueness(otherGroup, existingGroup);
-    }
-
-    Map<String, String> updateFields = new HashMap<>();
-    if (updateName) {
-      updateFields.put(Neo4JFields.NAME, groupName.stringValue());
-      updateFields.put(Neo4JFields.DISPLAY_NAME, groupName.stringValue());
-    }
-    if (updateDescription) {
-      updateFields.put(Neo4JFields.DESCRIPTION, groupDescription.stringValue());
-    }
-    FolderServerGroup updatedGroup = groupSession.updateGroupById(id, updateFields);
-
-    c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
-        CedarOperations.update(FolderServerGroup.class, "id", id),
-        "There was an error while updating the group!"
-    );
-
-    return ok(asJson(updatedGroup));
   }
 
   private static FolderServerGroup findNonSpecialGroupById(CedarRequestContext c, GroupServiceSession groupSession,
-                                                           String id) throws CedarAssertionException {
+                                                           String id) throws CedarException {
     FolderServerGroup existingGroup = groupSession.findGroupById(id);
     c.should(existingGroup).be(NonNull).otherwiseNotFound(
         CedarOperations.lookup(FolderServerGroup.class, "id", id),
@@ -190,28 +182,19 @@ public class GroupController extends AbstractPermissionServerController {
 
     if (existingGroup.getSpecialGroup() != null) {
       CedarAssertionResult ar = new CedarAssertionResult("Special groups can not be modified!")
-          .setParameter("id", id)
-          .setParameter("specialGroup", existingGroup.getSpecialGroup())
+          .parameter("id", id)
+          .parameter("specialGroup", existingGroup.getSpecialGroup())
           .badRequest();
-      throw new CedarAssertionException(ar);
+      throw new CedarBackendException(ar);
     }
     return existingGroup;
   }
 
-  private static void checkUniqueness(FolderServerGroup otherGroup, FolderServerGroup existingGroup) throws
-      CedarAssertionException {
-    if (otherGroup != null && !otherGroup.getId().equals(existingGroup.getId())) {
-      CedarAssertionResult ar = new CedarAssertionResult(
-          "There is a group with the new name present in the system. Group names must be unique!")
-          .setParameter("name", otherGroup.getName())
-          .setParameter("id", otherGroup.getId())
-          .badRequest();
-      throw new CedarAssertionException(ar);
-    }
-  }
-
-  public static Result deleteGroup(String id) throws CedarAssertionException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+  @DELETE
+  @Timed
+  @Path("/{id}")
+  public Response deleteGroup(@PathParam("id") String id) throws CedarException {
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_DELETE);
@@ -234,11 +217,14 @@ public class GroupController extends AbstractPermissionServerController {
         "There was an error while deleting the group!"
     );
 
-    return noContent();
+    return Response.noContent().build();
   }
 
-  public static Result getGroupMembers(String id) throws CedarAssertionException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+  @GET
+  @Timed
+  @Path("/{id}/users")
+  public Response getGroupMembers(@PathParam("id") String id) throws CedarException {
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
@@ -255,11 +241,15 @@ public class GroupController extends AbstractPermissionServerController {
         CedarOperations.list(FolderServerGroup.class, "id", id),
         "There was an error while listing the group users!"
     );
-    return ok(asJson(groupUsers));
+
+    return Response.ok().entity(groupUsers).build();
   }
 
-  public static Result updateGroupMembers(String id) throws CedarAssertionException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request());
+  @PUT
+  @Timed
+  @Path("/{id}/users")
+  public Response updateGroupMembers(@PathParam("id") String id) throws CedarException {
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_UPDATE);
@@ -284,6 +274,72 @@ public class GroupController extends AbstractPermissionServerController {
     c.must(backendCallResult).be(Successful);
 
     CedarGroupUsers updatedGroupUsers = groupSession.findGroupUsers(id);
-    return ok(asJson(updatedGroupUsers));
+
+    return Response.ok().entity(updatedGroupUsers).build();
   }
+
+  @PATCH
+  @Timed
+  @Path("/{id}")
+  @Consumes("application/merge-patch+json")
+  public Response patchGroup(@PathParam("id") String id) throws CedarException {
+    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
+
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_UPDATE);
+
+    //c.must(c.request()).be(GenericAssertions.jsonBody);
+    c.must(c.request()).be(JsonMergePatch);
+    CedarRequestBody requestBody = c.request().getRequestBody();
+
+    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, id);
+
+    CedarParameter groupName = requestBody.get("name");
+    CedarParameter groupDescription = requestBody.get("description");
+
+    boolean updateName = (groupName.stringValue() != null || groupName.isPresentAndNull())
+        && theyDiffer(existingGroup.getName(), groupName.stringValue());
+    boolean updateDescription = (groupDescription.stringValue() != null || groupDescription.isPresentAndNull())
+        && theyDiffer(existingGroup.getDescription(), groupDescription.stringValue());
+
+    if (!updateName && !updateDescription) {
+      return Response.ok().entity(existingGroup).build();
+    }
+
+    // check if the new name is unique
+    if (updateName) {
+      FolderServerGroup otherGroup = groupSession.findGroupByName(groupName.stringValue());
+      checkUniqueness(otherGroup, existingGroup);
+    }
+
+    Map<String, String> updateFields = new HashMap<>();
+    if (updateName) {
+      updateFields.put(Neo4JFields.NAME, groupName.stringValue());
+      updateFields.put(Neo4JFields.DISPLAY_NAME, groupName.stringValue());
+    }
+    if (updateDescription) {
+      updateFields.put(Neo4JFields.DESCRIPTION, groupDescription.stringValue());
+    }
+    System.out.println(updateFields);
+    FolderServerGroup updatedGroup = groupSession.updateGroupById(id, updateFields);
+
+    c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
+        CedarOperations.update(FolderServerGroup.class, "id", id),
+        "There was an error while updating the group!"
+    );
+
+    return Response.ok().entity(updatedGroup).build();
+  }
+
+  private static boolean theyDiffer(String v1, String v2) {
+    if (v1 == null) {
+      return v2 != null;
+    }
+    if (v2 == null) {
+      return v1 != null;
+    }
+    return !v1.equals(v2);
+  }
+
 }
