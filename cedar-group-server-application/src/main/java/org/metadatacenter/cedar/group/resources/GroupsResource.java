@@ -274,6 +274,10 @@ public class GroupsResource {
     BackendCallResult backendCallResult = groupSession.updateGroupUsers(id, usersRequest);
     c.must(backendCallResult).be(Successful);
 
+    ADD permission update here
+    // if the group members really were changed
+    // we need to update the permissions on all the nodes that the group has access to
+
     CedarGroupUsers updatedGroupUsers = groupSession.findGroupUsers(id);
 
     return Response.ok().entity(updatedGroupUsers).build();
