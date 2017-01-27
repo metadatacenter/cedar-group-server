@@ -16,6 +16,7 @@ import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.server.GroupServiceSession;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.result.BackendCallResult;
+import org.metadatacenter.server.search.util.SearchPermissionService;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
 import org.metadatacenter.util.http.CedarUrlUtil;
@@ -44,7 +45,13 @@ public class GroupsResource {
   @Context
   HttpServletRequest request;
 
+  private static SearchPermissionService searchPermissionService;
+
   public GroupsResource() {
+  }
+
+  public static void injectSearchPermissionService(SearchPermissionService searchPermissionService) {
+    GroupsResource.searchPermissionService = searchPermissionService;
   }
 
   @GET
@@ -274,9 +281,8 @@ public class GroupsResource {
     BackendCallResult backendCallResult = groupSession.updateGroupUsers(id, usersRequest);
     c.must(backendCallResult).be(Successful);
 
-    ADD permission update here
-    // if the group members really were changed
-    // we need to update the permissions on all the nodes that the group has access to
+    //TODO: check if this was a real update in members
+    searchPermissionService.groupMembersUpdated(id);
 
     CedarGroupUsers updatedGroupUsers = groupSession.findGroupUsers(id);
 

@@ -9,10 +9,12 @@ import org.metadatacenter.cedar.group.resources.GroupsResource;
 import org.metadatacenter.cedar.group.resources.IndexResource;
 import org.metadatacenter.cedar.util.dw.CedarDropwizardApplicationUtil;
 import org.metadatacenter.config.CedarConfig;
+import org.metadatacenter.server.search.util.SearchPermissionService;
 
 public class GroupServerApplication extends Application<GroupServerConfiguration> {
 
   protected static CedarConfig cedarConfig;
+  private static SearchPermissionService searchPermissionService;
 
   public static void main(String[] args) throws Exception {
     new GroupServerApplication().run(args);
@@ -27,6 +29,10 @@ public class GroupServerApplication extends Application<GroupServerConfiguration
   public void initialize(Bootstrap<GroupServerConfiguration> bootstrap) {
     cedarConfig = CedarConfig.getInstance();
     CedarDataServices.getInstance(cedarConfig);
+
+    searchPermissionService = new SearchPermissionService();
+
+    GroupsResource.injectSearchPermissionService(searchPermissionService);
 
     CedarDropwizardApplicationUtil.setupKeycloak();
   }
