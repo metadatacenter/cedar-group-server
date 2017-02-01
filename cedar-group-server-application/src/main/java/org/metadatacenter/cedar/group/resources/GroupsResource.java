@@ -16,7 +16,7 @@ import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.server.GroupServiceSession;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.result.BackendCallResult;
-import org.metadatacenter.server.search.util.SearchPermissionService;
+import org.metadatacenter.server.search.util.SearchPermissionEnqueueService;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
 import org.metadatacenter.util.http.CedarUrlUtil;
@@ -45,12 +45,12 @@ public class GroupsResource {
   @Context
   HttpServletRequest request;
 
-  private static SearchPermissionService searchPermissionService;
+  private static SearchPermissionEnqueueService searchPermissionService;
 
   public GroupsResource() {
   }
 
-  public static void injectSearchPermissionService(SearchPermissionService searchPermissionService) {
+  public static void injectSearchPermissionService(SearchPermissionEnqueueService searchPermissionService) {
     GroupsResource.searchPermissionService = searchPermissionService;
   }
 
@@ -224,6 +224,8 @@ public class GroupsResource {
         CedarOperations.delete(FolderServerGroup.class, "id", id),
         "There was an error while deleting the group!"
     );
+
+    searchPermissionService.groupDeleted(id);
 
     return Response.noContent().build();
   }
