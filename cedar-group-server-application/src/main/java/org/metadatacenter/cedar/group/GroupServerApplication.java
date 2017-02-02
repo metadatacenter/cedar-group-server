@@ -10,12 +10,12 @@ import org.metadatacenter.cedar.group.resources.IndexResource;
 import org.metadatacenter.cedar.util.dw.CedarDropwizardApplicationUtil;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.server.cache.util.CacheService;
-import org.metadatacenter.server.search.util.SearchPermissionEnqueueService;
+import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
 
 public class GroupServerApplication extends Application<GroupServerConfiguration> {
 
   protected static CedarConfig cedarConfig;
-  private static SearchPermissionEnqueueService searchPermissionService;
+  private static SearchPermissionEnqueueService searchPermissionEnqueueService;
 
   public static void main(String[] args) throws Exception {
     new GroupServerApplication().run(args);
@@ -31,10 +31,10 @@ public class GroupServerApplication extends Application<GroupServerConfiguration
     cedarConfig = CedarConfig.getInstance();
     CedarDataServices.getInstance(cedarConfig);
 
-    searchPermissionService = new SearchPermissionEnqueueService(
+    searchPermissionEnqueueService = new SearchPermissionEnqueueService(
         new CacheService(cedarConfig.getCacheConfig().getPersistent()));
 
-    GroupsResource.injectSearchPermissionService(searchPermissionService);
+    GroupsResource.injectSearchPermissionService(searchPermissionEnqueueService);
 
     CedarDropwizardApplicationUtil.setupKeycloak();
   }

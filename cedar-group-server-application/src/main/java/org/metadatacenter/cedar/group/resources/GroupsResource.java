@@ -16,7 +16,7 @@ import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.server.GroupServiceSession;
 import org.metadatacenter.server.neo4j.Neo4JFields;
 import org.metadatacenter.server.result.BackendCallResult;
-import org.metadatacenter.server.search.util.SearchPermissionEnqueueService;
+import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
 import org.metadatacenter.util.http.CedarUrlUtil;
@@ -45,13 +45,13 @@ public class GroupsResource {
   @Context
   HttpServletRequest request;
 
-  private static SearchPermissionEnqueueService searchPermissionService;
+  private static SearchPermissionEnqueueService searchPermissionEnqueueService;
 
   public GroupsResource() {
   }
 
-  public static void injectSearchPermissionService(SearchPermissionEnqueueService searchPermissionService) {
-    GroupsResource.searchPermissionService = searchPermissionService;
+  public static void injectSearchPermissionService(SearchPermissionEnqueueService searchPermissionEnqueueService) {
+    GroupsResource.searchPermissionEnqueueService = searchPermissionEnqueueService;
   }
 
   @GET
@@ -225,7 +225,7 @@ public class GroupsResource {
         "There was an error while deleting the group!"
     );
 
-    searchPermissionService.groupDeleted(id);
+    searchPermissionEnqueueService.groupDeleted(id);
 
     return Response.noContent().build();
   }
@@ -284,7 +284,7 @@ public class GroupsResource {
     c.must(backendCallResult).be(Successful);
 
     //TODO: check if this was a real update in members
-    searchPermissionService.groupMembersUpdated(id);
+    searchPermissionEnqueueService.groupMembersUpdated(id);
 
     CedarGroupUsers updatedGroupUsers = groupSession.findGroupUsers(id);
 
