@@ -48,6 +48,11 @@
 
     <dependency>
       <groupId>org.metadatacenter</groupId>
+      <artifactId>cedar-search-operations</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.metadatacenter</groupId>
       <artifactId>cedar-folder-operations</artifactId>
     </dependency>
 
