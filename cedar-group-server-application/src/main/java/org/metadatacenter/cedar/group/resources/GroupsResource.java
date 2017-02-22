@@ -3,6 +3,7 @@ package org.metadatacenter.cedar.group.resources;
 import com.codahale.metrics.annotation.Timed;
 import io.dropwizard.jersey.PATCH;
 import org.metadatacenter.bridge.CedarDataServices;
+import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.error.CedarAssertionResult;
 import org.metadatacenter.error.CedarErrorKey;
 import org.metadatacenter.error.CedarErrorPack;
@@ -37,19 +38,13 @@ import static org.metadatacenter.server.security.model.auth.CedarPermission.*;
 
 @Path("/groups")
 @Produces(MediaType.APPLICATION_JSON)
-public class GroupsResource {
+public class GroupsResource extends AbstractGroupServerResource {
 
-  private
-  @Context
-  UriInfo uriInfo;
-
-  private
-  @Context
-  HttpServletRequest request;
 
   private static SearchPermissionEnqueueService searchPermissionEnqueueService;
 
-  public GroupsResource() {
+  public GroupsResource(CedarConfig cedarConfig) {
+    super(cedarConfig);
   }
 
   public static void injectSearchPermissionService(SearchPermissionEnqueueService searchPermissionEnqueueService) {
