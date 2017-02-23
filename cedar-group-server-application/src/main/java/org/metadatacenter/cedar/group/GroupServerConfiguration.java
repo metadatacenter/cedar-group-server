@@ -1,6 +1,6 @@
 package org.metadatacenter.cedar.group;
 
-import io.dropwizard.Configuration;
+import org.metadatacenter.cedar.util.dw.CedarMicroserviceConfiguration;
 
-public class GroupServerConfiguration extends Configuration {
+public class GroupServerConfiguration extends CedarMicroserviceConfiguration {
 }
