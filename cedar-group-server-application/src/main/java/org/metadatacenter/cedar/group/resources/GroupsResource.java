@@ -3,7 +3,10 @@ package org.metadatacenter.cedar.group.resources;
 import com.codahale.metrics.annotation.Timed;
 import io.dropwizard.jersey.PATCH;
 import org.metadatacenter.bridge.CedarDataServices;
+import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.error.CedarAssertionResult;
+import org.metadatacenter.error.CedarErrorKey;
+import org.metadatacenter.error.CedarErrorPack;
 import org.metadatacenter.exception.CedarBackendException;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.model.folderserver.FolderServerGroup;
@@ -35,19 +38,13 @@ import static org.metadatacenter.server.security.model.auth.CedarPermission.*;
 
 @Path("/groups")
 @Produces(MediaType.APPLICATION_JSON)
-public class GroupsResource {
+public class GroupsResource extends AbstractGroupServerResource {
 
-  private
-  @Context
-  UriInfo uriInfo;
-
-  private
-  @Context
-  HttpServletRequest request;
 
   private static SearchPermissionEnqueueService searchPermissionEnqueueService;
 
-  public GroupsResource() {
+  public GroupsResource(CedarConfig cedarConfig) {
+    super(cedarConfig);
   }
 
   public static void injectSearchPermissionService(SearchPermissionEnqueueService searchPermissionEnqueueService) {
@@ -89,14 +86,18 @@ public class GroupsResource {
 
     FolderServerGroup oldGroup = groupSession.findGroupByName(groupName.stringValue());
     c.should(oldGroup).be(Null).otherwiseBadRequest(
-        CedarOperations.lookup(FolderServerGroup.class, "name", groupName),
-        "There is a group with the same name present in the system. Group names must be unique!");
+        new CedarErrorPack()
+            .message("There is a group with the same name present in the system. Group names must be unique!")
+            .operation(CedarOperations.lookup(FolderServerGroup.class, "name", groupName))
+            .errorKey(CedarErrorKey.GROUP_ALREADY_PRESENT)
+    );
 
     FolderServerGroup newGroup = groupSession.createGroup(groupName.stringValue(), groupName.stringValue(),
         groupDescription.stringValue());
     c.should(newGroup).be(NonNull).otherwiseInternalServerError(
-        CedarOperations.create(FolderServerGroup.class, "name", groupName),
-        "There was an error while creating the group!"
+        new CedarErrorPack()
+            .message("There was an error while creating the group!")
+            .operation(CedarOperations.create(FolderServerGroup.class, "name", groupName))
     );
 
     UriBuilder builder = uriInfo.getAbsolutePathBuilder();
@@ -117,8 +118,10 @@ public class GroupsResource {
 
     FolderServerGroup group = groupSession.findGroupById(id);
     c.should(group).be(NonNull).otherwiseNotFound(
-        CedarOperations.lookup(FolderServerGroup.class, "id", id),
-        "The group can not be found by id!");
+        new CedarErrorPack()
+            .message("The group can not be found by id!")
+            .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
+    );
 
     // BackendCallResult<FolderServerGroup> bcr = groupSession.findGroupById(id);
     // c.must(backendCallResult).be(Successful);
@@ -157,8 +160,9 @@ public class GroupsResource {
     FolderServerGroup updatedGroup = groupSession.updateGroupById(id, updateFields);
 
     c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
-        CedarOperations.update(FolderServerGroup.class, "id", id),
-        "There was an error while updating the group!"
+        new CedarErrorPack()
+            .message("There was an error while updating the group!")
+            .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
     // BackendCallResult<FolderServerGroup> bcr = groupSession.updateGroup(c, groupSession, id, updateFields);
@@ -184,8 +188,9 @@ public class GroupsResource {
                                                            String id) throws CedarException {
     FolderServerGroup existingGroup = groupSession.findGroupById(id);
     c.should(existingGroup).be(NonNull).otherwiseNotFound(
-        CedarOperations.lookup(FolderServerGroup.class, "id", id),
-        "The group can not be found by id!"
+        new CedarErrorPack()
+            .message("The group can not be found by id!")
+            .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
     );
 
     if (existingGroup.getSpecialGroup() != null) {
@@ -211,18 +216,23 @@ public class GroupsResource {
     FolderServerGroup existingGroup = groupSession.findGroupById(id);
 
     c.should(existingGroup).be(NonNull).otherwiseNotFound(
-        CedarOperations.lookup(FolderServerGroup.class, "id", id),
-        "The group can not be found by id!");
+        new CedarErrorPack()
+            .message("The group can not be found by id!")
+            .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
+    );
 
     String specialGroup = existingGroup.getSpecialGroup();
     c.should(specialGroup).be(Null).otherwiseBadRequest(
-        CedarOperations.delete(FolderServerGroup.class, "id", id),
-        "The special group '" + specialGroup + "'can not be deleted!");
+        new CedarErrorPack()
+            .message("The special group '" + specialGroup + "'can not be deleted!")
+            .operation(CedarOperations.delete(FolderServerGroup.class, "id", id))
+    );
 
     boolean deleted = groupSession.deleteGroupById(id);
     c.should(deleted).be(True).otherwiseInternalServerError(
-        CedarOperations.delete(FolderServerGroup.class, "id", id),
-        "There was an error while deleting the group!"
+        new CedarErrorPack()
+            .message("There was an error while deleting the group!")
+            .operation(CedarOperations.delete(FolderServerGroup.class, "id", id))
     );
 
     searchPermissionEnqueueService.groupDeleted(id);
@@ -243,13 +253,16 @@ public class GroupsResource {
 
     FolderServerGroup group = groupSession.findGroupById(id);
     c.should(group).be(NonNull).otherwiseNotFound(
-        CedarOperations.lookup(FolderServerGroup.class, "id", id),
-        "The group can not be found by id!");
+        new CedarErrorPack()
+            .message("The group can not be found by id!")
+            .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
+    );
 
     CedarGroupUsers groupUsers = groupSession.findGroupUsers(id);
     c.should(groupUsers).be(NonNull).otherwiseInternalServerError(
-        CedarOperations.list(FolderServerGroup.class, "id", id),
-        "There was an error while listing the group users!"
+        new CedarErrorPack()
+            .message("There was an error while listing the group users!")
+            .operation(CedarOperations.list(FolderServerGroup.class, "id", id))
     );
 
     return Response.ok().entity(groupUsers).build();
@@ -268,14 +281,17 @@ public class GroupsResource {
 
     FolderServerGroup group = groupSession.findGroupById(id);
     c.should(group).be(NonNull).otherwiseNotFound(
-        CedarOperations.lookup(FolderServerGroup.class, "id", id),
-        "The group can not be found by id!");
-
+        new CedarErrorPack()
+            .message("The group can not be found by id!")
+            .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
+    );
 
     boolean isAdministrator = groupSession.userAdministersGroup(id);
     c.should(isAdministrator).be(True).otherwiseForbidden(
-        CedarOperations.update(FolderServerGroup.class, "id", id),
-        "Only the administrators can update the group!");
+        new CedarErrorPack()
+            .message("Only the administrators can update the group!")
+            .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
+    );
 
     CedarRequestBody requestBody = c.request().getRequestBody();
     CedarGroupUsersRequest usersRequest = requestBody.convert(CedarGroupUsersRequest.class);
@@ -334,12 +350,12 @@ public class GroupsResource {
     if (updateDescription) {
       updateFields.put(Neo4JFields.DESCRIPTION, groupDescription.stringValue());
     }
-    System.out.println(updateFields);
     FolderServerGroup updatedGroup = groupSession.updateGroupById(id, updateFields);
 
     c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
-        CedarOperations.update(FolderServerGroup.class, "id", id),
-        "There was an error while updating the group!"
+        new CedarErrorPack()
+            .message("There was an error while updating the group!")
+            .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
     return Response.ok().entity(updatedGroup).build();

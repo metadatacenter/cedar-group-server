@@ -9,9 +9,9 @@ dist
 *.iml
 /out
 /.idea_modules
-/.classpath
-/.project
-/.settings
+.classpath
+.project
+.settings
 keycloak.json
 RUNNING_PID
 CEDAR_HOME_IS_UNDEFINED

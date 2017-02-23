@@ -38,7 +38,7 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
     final IndexResource index = new IndexResource();
     environment.jersey().register(index);
 
-    final GroupsResource groups = new GroupsResource();
+    final GroupsResource groups = new GroupsResource(cedarConfig);
     environment.jersey().register(groups);
 
     final GroupServerHealthCheck healthCheck = new GroupServerHealthCheck();
