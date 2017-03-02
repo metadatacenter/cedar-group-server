@@ -3,7 +3,6 @@
 To run the server
 
     java \
-      -Dkeycloak.config.path="$CEDAR_HOME/keycloak.json" \
       -jar $CEDAR_HOME/cedar-group-server/cedar-group-server-application/target/cedar-group-server-application-*.jar \
       server \
       "$CEDAR_HOME/cedar-group-server/cedar-group-server-application/config.yml"
