@@ -12,8 +12,6 @@ import org.metadatacenter.server.search.permission.SearchPermissionEnqueueServic
 
 public class GroupServerApplication extends CedarMicroserviceApplication<GroupServerConfiguration> {
 
-  private static SearchPermissionEnqueueService searchPermissionEnqueueService;
-
   public static void main(String[] args) throws Exception {
     new GroupServerApplication().run(args);
   }
@@ -26,8 +24,8 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
   @Override
   public void initializeApp(Bootstrap<GroupServerConfiguration> bootstrap) {
     CedarDataServices.initializeFolderServices(cedarConfig);
-    
-    searchPermissionEnqueueService = new SearchPermissionEnqueueService(
+
+    SearchPermissionEnqueueService searchPermissionEnqueueService = new SearchPermissionEnqueueService(
         new CacheService(cedarConfig.getCacheConfig().getPersistent()));
 
     GroupsResource.injectSearchPermissionService(searchPermissionEnqueueService);
