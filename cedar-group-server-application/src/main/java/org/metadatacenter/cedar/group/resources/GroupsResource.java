@@ -17,16 +17,17 @@ import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.server.GroupServiceSession;
-import org.metadatacenter.server.neo4j.Neo4JFields;
+import org.metadatacenter.server.neo4j.parameter.NodeProperty;
 import org.metadatacenter.server.result.BackendCallResult;
 import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
 import org.metadatacenter.util.http.CedarUrlUtil;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.*;
-import javax.ws.rs.core.*;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -153,10 +154,10 @@ public class GroupsResource extends AbstractGroupServerResource {
     FolderServerGroup otherGroup = groupSession.findGroupByName(groupName.stringValue());
     checkUniqueness(otherGroup, existingGroup);
 
-    Map<String, String> updateFields = new HashMap<>();
-    updateFields.put(Neo4JFields.NAME, groupName.stringValue());
-    updateFields.put(Neo4JFields.DISPLAY_NAME, groupName.stringValue());
-    updateFields.put(Neo4JFields.DESCRIPTION, groupDescription.stringValue());
+    Map<NodeProperty, String> updateFields = new HashMap<>();
+    updateFields.put(NodeProperty.NAME, groupName.stringValue());
+    updateFields.put(NodeProperty.DISPLAY_NAME, groupName.stringValue());
+    updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
     FolderServerGroup updatedGroup = groupSession.updateGroupById(id, updateFields);
 
     c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
@@ -342,13 +343,13 @@ public class GroupsResource extends AbstractGroupServerResource {
       checkUniqueness(otherGroup, existingGroup);
     }
 
-    Map<String, String> updateFields = new HashMap<>();
+    Map<NodeProperty, String> updateFields = new HashMap<>();
     if (updateName) {
-      updateFields.put(Neo4JFields.NAME, groupName.stringValue());
-      updateFields.put(Neo4JFields.DISPLAY_NAME, groupName.stringValue());
+      updateFields.put(NodeProperty.NAME, groupName.stringValue());
+      updateFields.put(NodeProperty.DISPLAY_NAME, groupName.stringValue());
     }
     if (updateDescription) {
-      updateFields.put(Neo4JFields.DESCRIPTION, groupDescription.stringValue());
+      updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
     }
     FolderServerGroup updatedGroup = groupSession.updateGroupById(id, updateFields);
 
