@@ -1,6 +1,5 @@
 sudo: required
 dist: trusty
-
 language: java
 jdk:
 - oraclejdk8
@@ -9,13 +8,14 @@ branches:
   - develop
   - master
 notifications:
-  email:
-    recipients:
-    - cedar-core-developers@lists.stanford.edu
-    on_success: never
+  slack:
+    on_success: change
     on_failure: always
-install: '[ ${TRAVIS_PULL_REQUEST} = ''false'' ] && mvn -DskipTests=false clean deploy --settings .m2/travis-settings.xml'
-script: '[ ${TRAVIS_PULL_REQUEST} = ''false'' ] && mvn -DskipTests=true clean --settings .m2/travis-settings.xml'
+    secure: fOIf3ak8dFU0ifu08IzllvKt1eA6Y5Xx/82ahHVZ93aNsB8jSy+h+osTGxN3EgWUpGAhLtWE5oRsdHt9va57sWrhJXO4K+lg38E1XT3l68lXGX1TUgSiLYEX+DLIKQ8+AfiuU9uEkLD1HPg3H5mnjpZLYegcgA7/pNnUaUVeqj8MaElJecVj2vcPIAkIp0tS/wXs0oG4YEPgv7yCfLXkNmI3x8FwIq7VjumF/yEz+NMMI2Wfnr1qwFOOoaWQm5dsRGW3zqgpvInLEr6MHm2RXw8hO5OWMGqV+SV1L7vVtZprls+e2Kj3iLsr/8Dy2n0r1VofNDpV8EWqBEhaNAocXAoCXXJA0+wxv38MVUp4Wf+5ja8LqNg0tzauE0Piq6AFmgRTALKK0Ggs1NUA/YeB01N5IXe+oOQwn60ckrdrgDZmlSX4xDoWXcUIryUqUD4n0ATHKkBNU0FjSvd4XmhdPkTPyI6bLzfrxCNsHvbNBuSgiv6hzRruFuq8CRdMr1q5KdADvWeygKbXemiOjBoKga7POjf7oAR7ie+xP+cFivFyM6sd6kUh7KsKiTYsy7vKpNCE8tSMElb/aUCxrP7W9KrGewArB4FV889VVQ6Ntd4QXi0Aw2fPdrq0z1D07NVY2xkSnnBnDXp8l8S8AN9YPcvKtL6uSp0eeGlu+HQLuN8=
+install: '[ ${TRAVIS_PULL_REQUEST} = ''false'' ] && mvn -DskipTests=false clean deploy
+  --settings .m2/travis-settings.xml'
+script: '[ ${TRAVIS_PULL_REQUEST} = ''false'' ] && mvn -DskipTests=true clean --settings
+  .m2/travis-settings.xml'
 env:
   global:
   - secure: FFydfmribYTKP26n/sGFa2X2p+pqu+eKcCbEsKuTD7DjTIKroOyKbM8wRhmMMpefrP1DZiYlPscE1yjmPLd4c7roPLwRG124a3B4MvmSqVaxe6yAXpOM+y5gHg00UXvVtouOOaqkVh32AYSyQVoBK3+ZxHED7YLMZTlQQ7lzhwp21zisni1FXDC4N5u/a8tk8X3JSophzZuqhOU63bBl18M+C7fCWNA0AK+Xex74E7j06+YcvOWcaDId48k/0lwBRzr+fLDH0jp+flsotgB3LYFpgLRK6uVc2Ixfp79ukCSoFgGNv4Ai+V69sOa1Wx9m1i0kItKq9lAeb/mZiTc9VRygD/p7ChUjod8wzw6C/dt1DaCDWvz9UnL8kvhV2jUB/VD+ik83dT+V0AiMQPZHpB3ecsGT5+rR40lwqfwX4+6xYbtsyRMEZJdTfneK2wix/7DfzYB13BWtFRrDqhM1+fWD1Z+xNJEqpEMmYJSUMgbJ9xXSeEmTdTCm4pDyGUkRMrB9FUiF8Z9i4R0MBWTTQKXpdBthF7PDY0fyycldlcBvYVZoHy1FCzG5QEeAmy1W4+7Wp5YYgfR3ULNIhPibtm8mCIFpR4xWD73jAdnIUc4/y2p1iuhP4vOL5jYxhakuuwWbYmeUWrcIu1wrzbu+LtEAa6dR67J7WUkJLhLu6r8=
