@@ -1,12 +1,12 @@
 package org.metadatacenter.cedar.group;
 
-import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.cedar.group.health.GroupServerHealthCheck;
 import org.metadatacenter.cedar.group.resources.GroupsResource;
 import org.metadatacenter.cedar.group.resources.IndexResource;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication;
+import org.metadatacenter.model.ServerName;
 import org.metadatacenter.server.cache.util.CacheService;
 import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
 
@@ -17,12 +17,12 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
   }
 
   @Override
-  public String getName() {
-    return "cedar-group-server";
+  protected ServerName getServerName() {
+    return ServerName.GROUP;
   }
 
   @Override
-  public void initializeApp(Bootstrap<GroupServerConfiguration> bootstrap) {
+  public void initializeApp() {
     CedarDataServices.initializeFolderServices(cedarConfig);
 
     SearchPermissionEnqueueService searchPermissionEnqueueService = new SearchPermissionEnqueueService(
