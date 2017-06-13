@@ -20,6 +20,8 @@ public class CedarConfigGroupTest {
 
     env.put(CedarEnvironmentVariable.CEDAR_HOST.getName(), "metadatacenter.orgx");
 
+    env.put(CedarEnvironmentVariable.CEDAR_NET_GATEWAY.getName(), "127.0.0.1");
+
     env.put(CedarEnvironmentVariable.CEDAR_ADMIN_USER_API_KEY.getName(), "1234");
 
     env.put(CedarEnvironmentVariable.CEDAR_NEO4J_USER_PASSWORD.getName(), "password");
@@ -37,6 +39,8 @@ public class CedarConfigGroupTest {
     env.put(CedarEnvironmentVariable.CEDAR_GROUP_HTTP_PORT.getName(), "9009");
     env.put(CedarEnvironmentVariable.CEDAR_GROUP_ADMIN_PORT.getName(), "9109");
     env.put(CedarEnvironmentVariable.CEDAR_GROUP_STOP_PORT.getName(), "9209");
+
+    env.put(CedarEnvironmentVariable.CEDAR_USER_HTTP_PORT.getName(), "9005");
 
     TestUtil.setEnv(env);
   }
