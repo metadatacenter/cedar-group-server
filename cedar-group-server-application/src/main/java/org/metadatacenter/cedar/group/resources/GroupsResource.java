@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.metadatacenter.constant.CedarPathParameters.PP_ID;
+import static org.metadatacenter.constant.HttpConstants.CONTENT_TYPE_APPLICATION_MERGE_PATCH_JSON;
 import static org.metadatacenter.rest.assertion.GenericAssertions.*;
 import static org.metadatacenter.server.security.model.auth.CedarPermission.*;
 
@@ -311,7 +312,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   @PATCH
   @Timed
   @Path("/{id}")
-  @Consumes("application/merge-patch+json")
+  @Consumes(CONTENT_TYPE_APPLICATION_MERGE_PATCH_JSON)
   public Response patchGroup(@PathParam(PP_ID) String id) throws CedarException {
     CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
 
