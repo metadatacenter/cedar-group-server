@@ -1,5 +1,6 @@
 package org.metadatacenter.cedar.group;
 
+import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.cedar.group.health.GroupServerHealthCheck;
@@ -19,6 +20,10 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
   @Override
   protected ServerName getServerName() {
     return ServerName.GROUP;
+  }
+
+  @Override
+  protected void initializeWithBootstrap(Bootstrap<GroupServerConfiguration> bootstrap) {
   }
 
   @Override
