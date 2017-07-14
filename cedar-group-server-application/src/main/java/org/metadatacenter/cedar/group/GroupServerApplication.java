@@ -23,7 +23,7 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
   }
 
   @Override
-  protected void initializeWithBootsrap(Bootstrap<GroupServerConfiguration> bootstrap) {
+  protected void initializeWithBootstrap(Bootstrap<GroupServerConfiguration> bootstrap) {
   }
 
   @Override
