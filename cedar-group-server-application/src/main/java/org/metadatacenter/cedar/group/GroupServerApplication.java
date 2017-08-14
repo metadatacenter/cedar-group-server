@@ -7,6 +7,7 @@ import org.metadatacenter.cedar.group.health.GroupServerHealthCheck;
 import org.metadatacenter.cedar.group.resources.GroupsResource;
 import org.metadatacenter.cedar.group.resources.IndexResource;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication;
+import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.model.ServerName;
 import org.metadatacenter.server.cache.util.CacheService;
 import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
@@ -23,7 +24,7 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
   }
 
   @Override
-  protected void initializeWithBootstrap(Bootstrap<GroupServerConfiguration> bootstrap) {
+  protected void initializeWithBootstrap(Bootstrap<GroupServerConfiguration> bootstrap, CedarConfig cedarConfig) {
   }
 
   @Override
