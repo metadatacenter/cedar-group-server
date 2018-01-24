@@ -29,7 +29,7 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
 
   @Override
   public void initializeApp() {
-    CedarDataServices.initializeFolderServices(cedarConfig);
+    CedarDataServices.initializeWorkspaceServices(cedarConfig);
 
     SearchPermissionEnqueueService searchPermissionEnqueueService = new SearchPermissionEnqueueService(
         new CacheService(cedarConfig.getCacheConfig().getPersistent()));
