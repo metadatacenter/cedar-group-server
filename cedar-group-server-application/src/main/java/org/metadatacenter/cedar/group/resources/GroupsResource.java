@@ -35,6 +35,9 @@ import java.util.Map;
 
 import static org.metadatacenter.constant.CedarPathParameters.PP_ID;
 import static org.metadatacenter.constant.HttpConstants.CONTENT_TYPE_APPLICATION_MERGE_PATCH_JSON;
+import static org.metadatacenter.error.CedarErrorKey.GROUP_CAN_BY_DELETED_ONLY_BY_GROUP_ADMIN;
+import static org.metadatacenter.error.CedarErrorKey.GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN;
+import static org.metadatacenter.error.CedarErrorKey.SPECIAL_GROUP_CAN_NOT_BE_DELETED;
 import static org.metadatacenter.rest.assertion.GenericAssertions.*;
 import static org.metadatacenter.server.security.model.auth.CedarPermission.*;
 
@@ -225,9 +228,21 @@ public class GroupsResource extends AbstractGroupServerResource {
     String specialGroup = existingGroup.getSpecialGroup();
     c.should(specialGroup).be(Null).otherwiseBadRequest(
         new CedarErrorPack()
+            .errorKey(SPECIAL_GROUP_CAN_NOT_BE_DELETED)
+            .parameter("name", existingGroup.getName())
             .message("The special group '" + specialGroup + "'can not be deleted!")
             .operation(CedarOperations.delete(FolderServerGroup.class, "id", id))
     );
+
+    boolean isAdministrator = groupSession.userAdministersGroup(id) || c.getCedarUser().has
+        (UPDATE_NOT_ADMINISTERED_GROUP);
+    c.should(isAdministrator).be(True).otherwiseForbidden(
+        new CedarErrorPack()
+            .errorKey(GROUP_CAN_BY_DELETED_ONLY_BY_GROUP_ADMIN)
+            .message("Only the administrators can delete the group!")
+            .operation(CedarOperations.delete(FolderServerGroup.class, "id", id))
+    );
+
 
     boolean deleted = groupSession.deleteGroupById(id);
     c.should(deleted).be(True).otherwiseInternalServerError(
@@ -287,9 +302,11 @@ public class GroupsResource extends AbstractGroupServerResource {
             .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
     );
 
-    boolean isAdministrator = groupSession.userAdministersGroup(id);
+    boolean isAdministrator = groupSession.userAdministersGroup(id) || c.getCedarUser().has
+        (UPDATE_NOT_ADMINISTERED_GROUP);
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
+            .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
             .message("Only the administrators can update the group!")
             .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
