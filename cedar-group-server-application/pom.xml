@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.metadatacenter</groupId>
     <artifactId>cedar-group-server</artifactId>
-    <version>1.8.8</version>
+    <version>1.8.9</version>
   </parent>
 
   <groupId>org.metadatacenter</groupId>
@@ -18,7 +18,7 @@
 
     <dependency>
       <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-server-rest</artifactId>
+      <artifactId>cedar-server-globals</artifactId>
     </dependency>
 
     <dependency>
@@ -28,22 +28,17 @@
 
     <dependency>
       <groupId>org.metadatacenter</groupId>
+      <artifactId>cedar-server-rest</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.metadatacenter</groupId>
       <artifactId>cedar-server-utils-core</artifactId>
     </dependency>
 
     <dependency>
       <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-template-operations</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-auth-operations-keycloak</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-user-operations</artifactId>
+      <artifactId>cedar-cache-operations</artifactId>
     </dependency>
 
     <dependency>
@@ -80,6 +75,16 @@
     <dependency>
       <groupId>javax.xml.ws</groupId>
       <artifactId>jaxws-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>javax.activation</groupId>
+      <artifactId>activation</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sun.activation</groupId>
+      <artifactId>javax.activation</artifactId>
     </dependency>
 
   </dependencies>
