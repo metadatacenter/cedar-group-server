@@ -83,8 +83,8 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     CedarRequestBody requestBody = c.request().getRequestBody();
 
-    CedarParameter groupName = requestBody.get("name");
-    CedarParameter groupDescription = requestBody.get("description");
+    CedarParameter groupName = requestBody.get("schema:name");
+    CedarParameter groupDescription = requestBody.get("schema:description");
     c.should(groupName, groupDescription).be(NonNull).otherwiseBadRequest();
 
     GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
@@ -93,7 +93,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(oldGroup).be(Null).otherwiseBadRequest(
         new CedarErrorPack()
             .message("There is a group with the same name present in the system. Group names must be unique!")
-            .operation(CedarOperations.lookup(FolderServerGroup.class, "name", groupName))
+            .operation(CedarOperations.lookup(FolderServerGroup.class, "schema:name", groupName))
             .errorKey(CedarErrorKey.GROUP_ALREADY_PRESENT)
     );
 
@@ -102,7 +102,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(newGroup).be(NonNull).otherwiseInternalServerError(
         new CedarErrorPack()
             .message("There was an error while creating the group!")
-            .operation(CedarOperations.create(FolderServerGroup.class, "name", groupName))
+            .operation(CedarOperations.create(FolderServerGroup.class, "schema:name", groupName))
     );
 
     UriBuilder builder = uriInfo.getAbsolutePathBuilder();
@@ -150,8 +150,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, id);
 
-    CedarParameter groupName = requestBody.get("name");
-    CedarParameter groupDescription = requestBody.get("description");
+    CedarParameter groupName = requestBody.get("schema:name");
+    CedarParameter groupDescription = requestBody.get("schema:description");
     c.should(groupName, groupDescription).be(NonNull).otherwiseBadRequest();
 
     // check if the new name is unique
@@ -181,7 +181,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     if (otherGroup != null && !otherGroup.getId().equals(existingGroup.getId())) {
       CedarAssertionResult ar = new CedarAssertionResult(
           "There is a group with the new name present in the system. Group names must be unique!")
-          .parameter("name", otherGroup.getName())
+          .parameter("schema:name", otherGroup.getName())
           .parameter("id", otherGroup.getId())
           .badRequest();
       throw new CedarBackendException(ar);
@@ -229,7 +229,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(specialGroup).be(Null).otherwiseBadRequest(
         new CedarErrorPack()
             .errorKey(SPECIAL_GROUP_CAN_NOT_BE_DELETED)
-            .parameter("name", existingGroup.getName())
+            .parameter("schema:name", existingGroup.getName())
             .message("The special group '" + specialGroup + "'can not be deleted!")
             .operation(CedarOperations.delete(FolderServerGroup.class, "id", id))
     );
@@ -342,8 +342,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, id);
 
-    CedarParameter groupName = requestBody.get("name");
-    CedarParameter groupDescription = requestBody.get("description");
+    CedarParameter groupName = requestBody.get("schema:name");
+    CedarParameter groupDescription = requestBody.get("schema:description");
 
     boolean updateName = (groupName.stringValue() != null || groupName.isPresentAndNull())
         && theyDiffer(existingGroup.getName(), groupName.stringValue());
