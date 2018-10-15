@@ -9,7 +9,6 @@ import org.metadatacenter.cedar.group.resources.IndexResource;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.model.ServerName;
-import org.metadatacenter.server.cache.util.CacheService;
 import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
 
 public class GroupServerApplication extends CedarMicroserviceApplication<GroupServerConfiguration> {
@@ -31,8 +30,7 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
   public void initializeApp() {
     CedarDataServices.initializeWorkspaceServices(cedarConfig);
 
-    SearchPermissionEnqueueService searchPermissionEnqueueService = new SearchPermissionEnqueueService(
-        new CacheService(cedarConfig.getCacheConfig().getPersistent()));
+    SearchPermissionEnqueueService searchPermissionEnqueueService = new SearchPermissionEnqueueService(cedarConfig);
 
     GroupsResource.injectSearchPermissionService(searchPermissionEnqueueService);
   }

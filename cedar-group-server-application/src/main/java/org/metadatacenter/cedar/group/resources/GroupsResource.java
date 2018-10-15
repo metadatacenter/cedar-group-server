@@ -15,7 +15,6 @@ import org.metadatacenter.operation.CedarOperations;
 import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
 import org.metadatacenter.rest.context.CedarRequestContext;
-import org.metadatacenter.rest.context.CedarRequestContextFactory;
 import org.metadatacenter.server.GroupServiceSession;
 import org.metadatacenter.server.neo4j.cypher.NodeProperty;
 import org.metadatacenter.server.result.BackendCallResult;
@@ -35,9 +34,7 @@ import java.util.Map;
 
 import static org.metadatacenter.constant.CedarPathParameters.PP_ID;
 import static org.metadatacenter.constant.HttpConstants.CONTENT_TYPE_APPLICATION_MERGE_PATCH_JSON;
-import static org.metadatacenter.error.CedarErrorKey.GROUP_CAN_BY_DELETED_ONLY_BY_GROUP_ADMIN;
-import static org.metadatacenter.error.CedarErrorKey.GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN;
-import static org.metadatacenter.error.CedarErrorKey.SPECIAL_GROUP_CAN_NOT_BE_DELETED;
+import static org.metadatacenter.error.CedarErrorKey.*;
 import static org.metadatacenter.rest.assertion.GenericAssertions.*;
 import static org.metadatacenter.server.security.model.auth.CedarPermission.*;
 
@@ -59,7 +56,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   @GET
   @Timed
   public Response findGroups() throws CedarException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
+    CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
@@ -76,7 +73,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   @POST
   @Timed
   public Response createGroup() throws CedarException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
+    CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_CREATE);
@@ -114,7 +111,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   @Timed
   @Path("/{id}")
   public Response findGroup(@PathParam(PP_ID) String id) throws CedarException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
+    CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
@@ -140,7 +137,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   @Timed
   @Path("/{id}")
   public Response updateGroup(@PathParam(PP_ID) String id) throws CedarException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
+    CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_UPDATE);
@@ -211,7 +208,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   @Timed
   @Path("/{id}")
   public Response deleteGroup(@PathParam(PP_ID) String id) throws CedarException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
+    CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_DELETE);
@@ -260,7 +257,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   @Timed
   @Path("/{id}/users")
   public Response getGroupMembers(@PathParam(PP_ID) String id) throws CedarException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
+    CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
@@ -288,7 +285,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   @Timed
   @Path("/{id}/users")
   public Response updateGroupMembers(@PathParam(PP_ID) String id) throws CedarException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
+    CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_UPDATE);
@@ -330,7 +327,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   @Path("/{id}")
   @Consumes(CONTENT_TYPE_APPLICATION_MERGE_PATCH_JSON)
   public Response patchGroup(@PathParam(PP_ID) String id) throws CedarException {
-    CedarRequestContext c = CedarRequestContextFactory.fromRequest(request);
+    CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_UPDATE);

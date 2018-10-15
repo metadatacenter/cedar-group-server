@@ -38,7 +38,7 @@
 
     <dependency>
       <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-cache-operations</artifactId>
+      <artifactId>cedar-queue-operations</artifactId>
     </dependency>
 
     <dependency>
