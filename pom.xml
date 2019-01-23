@@ -5,12 +5,12 @@
   <parent>
     <groupId>org.metadatacenter</groupId>
     <artifactId>cedar-parent</artifactId>
-    <version>2.2.3</version>
+    <version>2.2.5</version>
   </parent>
 
   <groupId>org.metadatacenter</groupId>
   <artifactId>cedar-group-server</artifactId>
-  <version>2.2.3</version>
+  <version>2.2.5</version>
   <packaging>pom</packaging>
 
   <name>CEDAR Group Server</name>
@@ -20,12 +20,23 @@
     <connection>scm:git:git@github.com:metadatacenter/cedar-group-server.git</connection>
     <developerConnection>scm:git:git@github.com:metadatacenter/cedar-group-server.git</developerConnection>
     <url>https://github.com/metadatacenter/cedar-group-server</url>
-    <tag>release-2.2.3</tag>
+    <tag>release-2.2.5</tag>
   </scm>
 
   <modules>
     <module>cedar-group-server-core</module>
     <module>cedar-group-server-application</module>
   </modules>
+
+  <build>
+    <plugins>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+
+    </plugins>
+  </build>
 
 </project>
