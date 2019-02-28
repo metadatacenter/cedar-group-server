@@ -28,7 +28,7 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
 
   @Override
   public void initializeApp() {
-    CedarDataServices.initializeWorkspaceServices(cedarConfig);
+    CedarDataServices.initializeNeo4jServices(cedarConfig);
 
     SearchPermissionEnqueueService searchPermissionEnqueueService = new SearchPermissionEnqueueService(cedarConfig);
 
