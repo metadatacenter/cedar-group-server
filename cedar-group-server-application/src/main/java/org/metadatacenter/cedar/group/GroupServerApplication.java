@@ -2,7 +2,6 @@ package org.metadatacenter.cedar.group;
 
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.cedar.group.health.GroupServerHealthCheck;
 import org.metadatacenter.cedar.group.resources.GroupsResource;
 import org.metadatacenter.cedar.group.resources.IndexResource;
