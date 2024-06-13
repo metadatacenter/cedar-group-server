@@ -160,6 +160,7 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     Map<NodeProperty, String> updateFields = new HashMap<>();
     updateFields.put(NodeProperty.NAME, groupName.stringValue());
+    updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase());
     updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
     FolderServerGroup updatedGroup = groupSession.updateGroupById(gid, updateFields);
 
@@ -366,6 +367,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     Map<NodeProperty, String> updateFields = new HashMap<>();
     if (updateName) {
       updateFields.put(NodeProperty.NAME, groupName.stringValue());
+      updateFields.put(NodeProperty.NAME, groupName.stringValue().toLowerCase());
     }
     if (updateDescription) {
       updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
