@@ -367,7 +367,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     Map<NodeProperty, String> updateFields = new HashMap<>();
     if (updateName) {
       updateFields.put(NodeProperty.NAME, groupName.stringValue());
-      updateFields.put(NodeProperty.NAME, groupName.stringValue().toLowerCase());
+      updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase());
     }
     if (updateDescription) {
       updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
