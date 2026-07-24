@@ -43,6 +43,9 @@ public class CedarConfigGroupTest {
 
     env.put(CedarEnvironmentVariable.CEDAR_USER_HTTP_PORT.getName(), "9005");
 
+    env.put(CedarEnvironmentVariable.CEDAR_TEST_USER1_ID.getName(), "https://metadatacenter.orgx/users/test-user-1");
+    env.put(CedarEnvironmentVariable.CEDAR_TEST_USER2_ID.getName(), "https://metadatacenter.orgx/users/test-user-2");
+
     TestUtil.setEnv(env);
   }
 
