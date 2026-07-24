@@ -32,8 +32,10 @@ import java.util.Map;
 public class GroupsResourceTest {
 
   static {
-    // Must run before the application rule boots the server, which reads the Neo4j env vars
-    EmbeddedCedarNeo4j.startAndRedirectEnvironment();
+    // Must run before the application rule boots the server, which reads the Neo4j env vars.
+    // Redis is redirected to a dead port: queue writes are best-effort, and this enforces that
+    // no endpoint under test ever depends on a live Redis.
+    EmbeddedCedarNeo4j.startAndRedirectEnvironment(Map.of("CEDAR_REDIS_PERSISTENT_PORT", "1"));
   }
 
   @ClassRule
