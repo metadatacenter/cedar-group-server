@@ -6,7 +6,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.metadatacenter.util.test.TestUtil;
+import org.metadatacenter.config.environment.CedarEnvironmentSource;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -26,11 +26,11 @@ public class GroupServerApplicationSmokeTest {
   static {
     // Must run before the test support boots the server, which reads the port env vars.
     // Alternate server ports, so the test instance never collides with a running dev server.
-    Map<String, String> environment = new HashMap<>(System.getenv());
+    Map<String, String> environment = new HashMap<>(CedarEnvironmentSource.getAll());
     environment.put("CEDAR_GROUP_HTTP_PORT", "19009");
     environment.put("CEDAR_GROUP_ADMIN_PORT", "19109");
     environment.put("CEDAR_GROUP_STOP_PORT", "19209");
-    TestUtil.setEnv(environment);
+    CedarEnvironmentSource.setOverride(environment);
   }
 
   public static final DropwizardTestSupport<GroupServerConfiguration> SERVER =
