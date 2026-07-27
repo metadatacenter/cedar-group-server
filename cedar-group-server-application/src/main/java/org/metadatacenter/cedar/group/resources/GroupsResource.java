@@ -150,6 +150,17 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
 
+    // Only an administrator of this group may rename it. GROUP_UPDATE is held by every user, so it
+    // gates nothing on its own; without this check any user could rename any group. Mirrors the check
+    // in updateGroupMembers and deleteGroup.
+    boolean isAdministrator = groupSession.userAdministersGroup(gid) || c.getCedarUser().has(UPDATE_NOT_ADMINISTERED_GROUP);
+    c.should(isAdministrator).be(True).otherwiseForbidden(
+        new CedarErrorPack()
+            .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
+            .message("Only the administrators can update the group!")
+            .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
+    );
+
     CedarParameter groupName = requestBody.get("schema:name");
     CedarParameter groupDescription = requestBody.get("schema:description");
     c.should(groupName, groupDescription).be(NonNull).otherwiseBadRequest();
@@ -345,6 +356,16 @@ public class GroupsResource extends AbstractGroupServerResource {
     CedarGroupId gid = CedarGroupId.build(id);
 
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
+
+    // Only an administrator of this group may change it. As in updateGroup, GROUP_UPDATE alone gates
+    // nothing since every user holds it.
+    boolean isAdministrator = groupSession.userAdministersGroup(gid) || c.getCedarUser().has(UPDATE_NOT_ADMINISTERED_GROUP);
+    c.should(isAdministrator).be(True).otherwiseForbidden(
+        new CedarErrorPack()
+            .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
+            .message("Only the administrators can update the group!")
+            .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
+    );
 
     CedarParameter groupName = requestBody.get("schema:name");
     CedarParameter groupDescription = requestBody.get("schema:description");
