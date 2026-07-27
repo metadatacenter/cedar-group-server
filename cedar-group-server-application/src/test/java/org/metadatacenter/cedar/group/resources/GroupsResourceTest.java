@@ -137,7 +137,9 @@ public class GroupsResourceTest {
     HttpResponse<String> first = request("POST", "/groups", body, authHeaderAdmin);
     Assertions.assertEquals(201, first.statusCode());
     HttpResponse<String> second = request("POST", "/groups", body, authHeaderAdmin);
-    Assertions.assertEquals(400, second.statusCode());
+    // 409 Conflict, not 400: the request is well formed and permitted, it collides with existing
+    // state. A client can act on that distinction; it could not when both were 400.
+    Assertions.assertEquals(409, second.statusCode());
     Assertions.assertTrue(second.body().contains("groupAlreadyPresent"));
   }
 

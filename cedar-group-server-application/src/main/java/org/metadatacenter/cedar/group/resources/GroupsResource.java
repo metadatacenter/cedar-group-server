@@ -88,7 +88,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
 
     FolderServerGroup oldGroup = groupSession.findGroupByName(groupName.stringValue());
-    c.should(oldGroup).be(Null).otherwiseBadRequest(
+    c.should(oldGroup).be(Null).otherwiseConflict(
         new CedarErrorPack()
             .message("There is a group with the same name present in the system. Group names must be unique!")
             .operation(CedarOperations.lookup(FolderServerGroup.class, "schema:name", groupName))
