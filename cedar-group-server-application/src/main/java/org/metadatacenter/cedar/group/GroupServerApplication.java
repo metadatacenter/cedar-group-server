@@ -1,10 +1,10 @@
 package org.metadatacenter.cedar.group;
 
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
-import org.metadatacenter.cedar.group.health.GroupServerHealthCheck;
+import io.dropwizard.core.setup.Bootstrap;
+import io.dropwizard.core.setup.Environment;
 import org.metadatacenter.cedar.group.resources.GroupsResource;
 import org.metadatacenter.cedar.group.resources.IndexResource;
+import org.metadatacenter.cedar.util.dw.CedarDefaultHealthCheck;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.model.ServerName;
@@ -34,13 +34,13 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
 
   @Override
   public void runApp(GroupServerConfiguration configuration, Environment environment) {
-    final IndexResource index = new IndexResource();
+    final IndexResource index = new IndexResource(cedarConfig);
     environment.jersey().register(index);
 
     final GroupsResource groups = new GroupsResource(cedarConfig);
     environment.jersey().register(groups);
 
-    final GroupServerHealthCheck healthCheck = new GroupServerHealthCheck();
+    final CedarDefaultHealthCheck healthCheck = new CedarDefaultHealthCheck();
     environment.healthChecks().register("message", healthCheck);
   }
 }
