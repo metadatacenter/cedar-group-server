@@ -62,7 +62,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     List<FolderServerGroup> groups = groupSession.findGroups();
 
     FolderServerGroupListResponse r = new FolderServerGroupListResponse();
@@ -85,7 +85,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     CedarParameter groupDescription = requestBody.get("schema:description");
     c.should(groupName, groupDescription).be(NonNull).otherwiseBadRequest();
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
 
     FolderServerGroup oldGroup = groupSession.findGroupByName(groupName.stringValue());
     c.should(oldGroup).be(Null).otherwiseConflict(
@@ -116,7 +116,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
 
     CedarGroupId gid = CedarGroupId.build(id);
     FolderServerGroup group = groupSession.findGroupById(gid);
@@ -145,7 +145,7 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     CedarRequestBody requestBody = c.request().getRequestBody();
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
@@ -226,7 +226,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_DELETE);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
     FolderServerGroup existingGroup = groupSession.findGroupById(gid);
 
@@ -276,7 +276,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
     FolderServerGroup group = groupSession.findGroupById(gid);
@@ -305,7 +305,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_UPDATE);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
     FolderServerGroup group = groupSession.findGroupById(gid);
@@ -352,7 +352,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.request()).be(JsonMergePatch);
     CedarRequestBody requestBody = c.request().getRequestBody();
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
