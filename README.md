@@ -1,5 +1,7 @@
 # cedar-group-server
 
+[![CI](https://github.com/metadatacenter/cedar-group-server/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/metadatacenter/cedar-group-server/actions/workflows/ci.yml)
+
 CEDAR service for managing groups
 
 #### Questions
