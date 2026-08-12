@@ -70,9 +70,14 @@ public class GroupsResourceTest {
   }
 
   private HttpResponse<String> request(String method, String path, String body, String authHeader) throws Exception {
+    return request(method, path, body, authHeader, "application/json");
+  }
+
+  private HttpResponse<String> request(String method, String path, String body, String authHeader,
+                                       String contentType) throws Exception {
     HttpRequest.Builder builder = HttpRequest.newBuilder()
         .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + path))
-        .header("Content-Type", "application/json");
+        .header("Content-Type", contentType);
     if (authHeader != null) {
       builder.header("Authorization", authHeader);
     }
@@ -82,6 +87,13 @@ public class GroupsResourceTest {
       builder.method(method, HttpRequest.BodyPublishers.ofString(body));
     }
     return CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+  }
+
+  private String createGroup(String name, String description) throws Exception {
+    HttpResponse<String> created = request("POST", "/groups",
+        "{\"schema:name\": \"" + name + "\", \"schema:description\": \"" + description + "\"}", authHeaderAdmin);
+    Assertions.assertEquals(201, created.statusCode(), "fixture group was not created: " + created.body());
+    return JsonMapper.MAPPER.readTree(created.body()).get("@id").asText();
   }
 
   private static String encode(String id) {
@@ -141,6 +153,92 @@ public class GroupsResourceTest {
     // state. A client can act on that distinction; it could not when both were 400.
     Assertions.assertEquals(409, second.statusCode());
     Assertions.assertTrue(second.body().contains("groupAlreadyPresent"));
+  }
+
+  /**
+   * Merge-patch reads an explicit null as "remove this property". A group must always have a name, so
+   * the request is refused — and refused as a bad request. It used to reach the update, where the null
+   * name was lowercased for the NAME_LOWER property and threw, answering 500.
+   */
+  @Test
+  public void patchCanNotRemoveTheGroupName() throws Exception {
+    String groupId = createGroup("Patch Null Name Group", "a group whose name will be patched away");
+
+    HttpResponse<String> patched = request("PATCH", "/groups/" + encode(groupId),
+        "{\"schema:name\": null}", authHeaderAdmin, "application/merge-patch+json");
+    Assertions.assertEquals(400, patched.statusCode(), "removing the name should be refused: " + patched.body());
+
+    HttpResponse<String> after = request("GET", "/groups/" + encode(groupId), null, authHeaderAdmin);
+    Assertions.assertEquals("Patch Null Name Group",
+        JsonMapper.MAPPER.readTree(after.body()).get("schema:name").asText(),
+        "the refused patch must have left the name alone");
+  }
+
+  /**
+   * A rename onto a sibling's name is the same collision {@link #duplicateGroupNameIsRejected} pins on
+   * create, and it gets the same answer: 409 with the key, not the 400 the rename path used to give.
+   * Asserted on both writing endpoints, which share the check.
+   */
+  @Test
+  public void renamingOntoAnExistingNameIsRejectedAsConflict() throws Exception {
+    createGroup("Rename Target Group", "the name that is already taken");
+    String otherId = createGroup("Rename Source Group", "the group that will try to take it");
+
+    HttpResponse<String> put = request("PUT", "/groups/" + encode(otherId),
+        "{\"schema:name\": \"Rename Target Group\", \"schema:description\": \"still trying\"}", authHeaderAdmin);
+    Assertions.assertEquals(409, put.statusCode(), "PUT rename collision: " + put.body());
+    Assertions.assertTrue(put.body().contains("groupAlreadyPresent"), put.body());
+
+    HttpResponse<String> patch = request("PATCH", "/groups/" + encode(otherId),
+        "{\"schema:name\": \"Rename Target Group\"}", authHeaderAdmin, "application/merge-patch+json");
+    Assertions.assertEquals(409, patch.statusCode(), "PATCH rename collision: " + patch.body());
+    Assertions.assertTrue(patch.body().contains("groupAlreadyPresent"), patch.body());
+  }
+
+  /**
+   * Group names are unique without regard to case. The uniqueness lookup used to match the cased NAME
+   * property, so a name differing only in case passed the check and both groups existed — indexed and
+   * listed next to each other by the lowercase name they shared.
+   */
+  @Test
+  public void groupNamesCollideRegardlessOfCase() throws Exception {
+    createGroup("Case Sensitivity Group", "the original");
+
+    HttpResponse<String> lowered = request("POST", "/groups",
+        "{\"schema:name\": \"case sensitivity group\", \"schema:description\": \"the same name, lowercased\"}",
+        authHeaderAdmin);
+    Assertions.assertEquals(409, lowered.statusCode(), "a lowercased duplicate should collide: " + lowered.body());
+    Assertions.assertTrue(lowered.body().contains("groupAlreadyPresent"), lowered.body());
+  }
+
+  /**
+   * A membership request naming a user the graph does not hold is refused whole. The relation queries
+   * match on id and affect nothing when the node is absent, so the unknown user used to be dropped in
+   * silence while the rest of the request was applied and the caller was answered 200.
+   */
+  @Test
+  public void memberUpdateNamingAnUnknownUserChangesNothing() throws Exception {
+    String groupId = createGroup("Unknown Member Group", "a group to aim a bad membership at");
+    String usersPath = "/groups/" + encode(groupId) + "/users";
+
+    HttpResponse<String> before = request("GET", usersPath, null, authHeaderAdmin);
+    Assertions.assertEquals(200, before.statusCode());
+    String membershipBefore = before.body();
+
+    String adminId = JsonMapper.MAPPER.readTree(membershipBefore).get("users").get(0).get("user").get("@id").asText();
+    String unknownId = "https://metadatacenter.orgx/users/00000000-0000-0000-0000-000000000000";
+    HttpResponse<String> updated = request("PUT", usersPath,
+        "{\"users\": ["
+            + "{\"user\": {\"@id\": \"" + adminId + "\"}, \"administrator\": true, \"member\": true},"
+            + "{\"user\": {\"@id\": \"" + unknownId + "\"}, \"administrator\": false, \"member\": true}"
+            + "]}",
+        authHeaderAdmin);
+    Assertions.assertEquals(404, updated.statusCode(), "an unknown user should fail the request: " + updated.body());
+    Assertions.assertTrue(updated.body().contains("userNotFound"), updated.body());
+
+    HttpResponse<String> after = request("GET", usersPath, null, authHeaderAdmin);
+    Assertions.assertEquals(membershipBefore, after.body(),
+        "the refused membership change must have left the group untouched");
   }
 
   @Test
