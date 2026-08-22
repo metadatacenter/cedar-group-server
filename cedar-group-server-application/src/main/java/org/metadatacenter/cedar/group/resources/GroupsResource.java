@@ -32,6 +32,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.metadatacenter.constant.CedarPathParameters.PP_ID;
 import static org.metadatacenter.constant.HttpConstants.CONTENT_TYPE_APPLICATION_MERGE_PATCH_JSON;
@@ -62,7 +63,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     List<FolderServerGroup> groups = groupSession.findGroups();
 
     FolderServerGroupListResponse r = new FolderServerGroupListResponse();
@@ -85,7 +86,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     CedarParameter groupDescription = requestBody.get("schema:description");
     c.should(groupName, groupDescription).be(NonNull).otherwiseBadRequest();
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
 
     FolderServerGroup oldGroup = groupSession.findGroupByName(groupName.stringValue());
     c.should(oldGroup).be(Null).otherwiseConflict(
@@ -116,7 +117,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
 
     CedarGroupId gid = CedarGroupId.build(id);
     FolderServerGroup group = groupSession.findGroupById(gid);
@@ -145,7 +146,7 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     CedarRequestBody requestBody = c.request().getRequestBody();
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
@@ -190,11 +191,16 @@ public class GroupsResource extends AbstractGroupServerResource {
 
   private static void checkUniqueness(FolderServerGroup otherGroup, FolderServerGroup existingGroup) throws CedarException {
     if (otherGroup != null && !otherGroup.getId().equals(existingGroup.getId())) {
+      // 409 and the same error key as createGroup, which rejects the identical condition: the request
+      // is well formed and permitted, it collides with existing state. A 400 tells the client to fix a
+      // request that has nothing wrong with it, and without the key the collision can only be
+      // recognized by reading the message.
       CedarAssertionResult ar = new CedarAssertionResult(
           "There is a group with the new name present in the system. Group names must be unique!")
           .parameter("schema:name", otherGroup.getName())
           .parameter("id", otherGroup.getId())
-          .badRequest();
+          .errorKey(CedarErrorKey.GROUP_ALREADY_PRESENT)
+          .conflict();
       throw new CedarBackendException(ar);
     }
   }
@@ -226,7 +232,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_DELETE);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
     FolderServerGroup existingGroup = groupSession.findGroupById(gid);
 
@@ -276,7 +282,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_READ);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
     FolderServerGroup group = groupSession.findGroupById(gid);
@@ -305,7 +311,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_UPDATE);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
     FolderServerGroup group = groupSession.findGroupById(gid);
@@ -352,7 +358,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.request()).be(JsonMergePatch);
     CedarRequestBody requestBody = c.request().getRequestBody();
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
@@ -370,7 +376,20 @@ public class GroupsResource extends AbstractGroupServerResource {
     CedarParameter groupName = requestBody.get("schema:name");
     CedarParameter groupDescription = requestBody.get("schema:description");
 
-    boolean updateName = (groupName.stringValue() != null || groupName.isPresentAndNull())
+    // Merge-patch reads an explicit null as "remove this property", but a group must always have a
+    // name. Rejecting it here is what the name branch below assumes: it reads a present null as a
+    // rename and then lowercases the value, which threw for a null name.
+    if (groupName.isPresentAndNull()) {
+      CedarAssertionResult ar = new CedarAssertionResult("The group name can not be removed!")
+          .parameter("schema:name", "null")
+          .parameter("id", id)
+          .badRequest();
+      throw new CedarBackendException(ar);
+    }
+
+    // A present null is already refused for the name, so only a supplied value renames. The
+    // description may be nulled: clearing it is a legitimate merge-patch.
+    boolean updateName = groupName.stringValue() != null
         && theyDiffer(existingGroup.getName(), groupName.stringValue());
     boolean updateDescription = (groupDescription.stringValue() != null || groupDescription.isPresentAndNull())
         && theyDiffer(existingGroup.getDescription(), groupDescription.stringValue());
@@ -405,13 +424,7 @@ public class GroupsResource extends AbstractGroupServerResource {
   }
 
   private static boolean theyDiffer(String v1, String v2) {
-    if (v1 == null) {
-      return v2 != null;
-    }
-    if (v2 == null) {
-      return v1 != null;
-    }
-    return !v1.equals(v2);
+    return !Objects.equals(v1, v2);
   }
 
 }
