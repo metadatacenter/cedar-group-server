@@ -18,6 +18,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -64,6 +65,7 @@ public class GroupServerApplicationSmokeTest {
   private HttpResponse<String> get(String path, String... headers) throws Exception {
     HttpRequest.Builder request = HttpRequest.newBuilder()
         .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + path))
+        .timeout(Duration.ofSeconds(5))
         .GET();
     if (headers.length > 0) {
       request.headers(headers);
