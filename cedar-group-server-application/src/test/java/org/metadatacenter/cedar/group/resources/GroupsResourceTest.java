@@ -75,11 +75,19 @@ public class GroupsResourceTest {
 
   private HttpResponse<String> request(String method, String path, String body, String authHeader,
                                        String contentType) throws Exception {
+    return request(method, path, body, authHeader, contentType, null);
+  }
+
+  private HttpResponse<String> request(String method, String path, String body, String authHeader,
+                                       String contentType, String ifMatch) throws Exception {
     HttpRequest.Builder builder = HttpRequest.newBuilder()
         .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + path))
         .header("Content-Type", contentType);
     if (authHeader != null) {
       builder.header("Authorization", authHeader);
+    }
+    if (ifMatch != null) {
+      builder.header("If-Match", ifMatch);
     }
     if (body == null) {
       builder.method(method, HttpRequest.BodyPublishers.noBody());
@@ -224,6 +232,7 @@ public class GroupsResourceTest {
     HttpResponse<String> before = request("GET", usersPath, null, authHeaderAdmin);
     Assertions.assertEquals(200, before.statusCode());
     String membershipBefore = before.body();
+    String membershipEtag = before.headers().firstValue("ETag").orElseThrow();
 
     String adminId = JsonMapper.MAPPER.readTree(membershipBefore).get("users").get(0).get("user").get("@id").asText();
     String unknownId = "https://metadatacenter.orgx/users/00000000-0000-0000-0000-000000000000";
@@ -232,13 +241,44 @@ public class GroupsResourceTest {
             + "{\"user\": {\"@id\": \"" + adminId + "\"}, \"administrator\": true, \"member\": true},"
             + "{\"user\": {\"@id\": \"" + unknownId + "\"}, \"administrator\": false, \"member\": true}"
             + "]}",
-        authHeaderAdmin);
+        authHeaderAdmin, "application/json", membershipEtag);
     Assertions.assertEquals(404, updated.statusCode(), "an unknown user should fail the request: " + updated.body());
     Assertions.assertTrue(updated.body().contains("userNotFound"), updated.body());
 
     HttpResponse<String> after = request("GET", usersPath, null, authHeaderAdmin);
     Assertions.assertEquals(membershipBefore, after.body(),
         "the refused membership change must have left the group untouched");
+  }
+
+  @Test
+  public void membershipReplacementRequiresAndAdvancesItsOwnEtag() throws Exception {
+    String groupId = createGroup("Membership ETag Group", "a group with versioned membership");
+    String usersPath = "/groups/" + encode(groupId) + "/users";
+
+    HttpResponse<String> initial = request("GET", usersPath, null, authHeaderAdmin);
+    Assertions.assertEquals(200, initial.statusCode());
+    String initialEtag = initial.headers().firstValue("ETag").orElseThrow();
+    Assertions.assertEquals("\"1\"", initialEtag);
+
+    String unchanged = initial.body();
+    HttpResponse<String> missing = request("PUT", usersPath, unchanged, authHeaderAdmin);
+    Assertions.assertEquals(428, missing.statusCode(), missing.body());
+
+    HttpResponse<String> updated = request("PUT", usersPath, unchanged, authHeaderAdmin,
+        "application/json", initialEtag);
+    Assertions.assertEquals(200, updated.statusCode(), updated.body());
+    Assertions.assertEquals("\"2\"", updated.headers().firstValue("ETag").orElseThrow());
+
+    HttpResponse<String> stale = request("PUT", usersPath, unchanged, authHeaderAdmin,
+        "application/json", initialEtag);
+    Assertions.assertEquals(412, stale.statusCode(), stale.body());
+    Assertions.assertEquals("\"2\"",
+        JsonMapper.MAPPER.readTree(stale.body()).get("parameters").get("currentETag").asText());
+
+    HttpResponse<String> wildcard = request("PUT", usersPath, unchanged, authHeaderAdmin,
+        "application/json", "*");
+    Assertions.assertEquals(200, wildcard.statusCode(), wildcard.body());
+    Assertions.assertEquals("\"3\"", wildcard.headers().firstValue("ETag").orElseThrow());
   }
 
   @Test

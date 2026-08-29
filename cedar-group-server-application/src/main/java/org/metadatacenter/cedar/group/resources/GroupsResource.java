@@ -10,6 +10,7 @@ import org.metadatacenter.error.CedarErrorPack;
 import org.metadatacenter.exception.CedarBackendException;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.id.CedarGroupId;
+import org.metadatacenter.http.CedarResponseStatus;
 import org.metadatacenter.model.folderserver.basic.FolderServerGroup;
 import org.metadatacenter.model.response.FolderServerGroupListResponse;
 import org.metadatacenter.operation.CedarOperations;
@@ -17,14 +18,19 @@ import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.GroupServiceSession;
+import org.metadatacenter.server.RevisionConflictException;
+import org.metadatacenter.server.RevisionPrecondition;
+import org.metadatacenter.server.VersionedGroupUsers;
 import org.metadatacenter.server.neo4j.cypher.NodeProperty;
 import org.metadatacenter.server.result.BackendCallResult;
 import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
-import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
 import org.metadatacenter.util.http.CedarUrlUtil;
+import org.metadatacenter.util.http.CedarResponse;
+import org.metadatacenter.util.http.RevisionPreconditionParser;
 
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
@@ -292,14 +298,15 @@ public class GroupsResource extends AbstractGroupServerResource {
             .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
     );
 
-    CedarGroupUsers groupUsers = groupSession.findGroupUsers(gid);
+    VersionedGroupUsers groupUsers = groupSession.findVersionedGroupUsers(gid);
     c.should(groupUsers).be(NonNull).otherwiseInternalServerError(
         new CedarErrorPack()
             .message("There was an error while listing the group users!")
             .operation(CedarOperations.list(FolderServerGroup.class, "id", id))
     );
 
-    return Response.ok().entity(groupUsers).build();
+    return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(groupUsers.revision()))
+        .entity(groupUsers.content()).build();
   }
 
   @PUT
@@ -330,18 +337,38 @@ public class GroupsResource extends AbstractGroupServerResource {
             .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
+    String ifMatch = c.getIfMatchHeader();
+    if (ifMatch == null || ifMatch.isBlank()) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+          .id(id)
+          .errorKey(GROUP_USERS_NOT_UPDATED)
+          .errorMessage("Replacing group membership requires the ETag returned by GET in If-Match")
+          .build();
+    }
+    RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
+
     CedarRequestBody requestBody = c.request().getRequestBody();
     CedarGroupUsersRequest usersRequest = requestBody.convert(CedarGroupUsersRequest.class);
 
-    BackendCallResult backendCallResult = groupSession.updateGroupUsers(gid, usersRequest);
+    BackendCallResult<VersionedGroupUsers> backendCallResult;
+    try {
+      backendCallResult = groupSession.updateGroupUsers(gid, usersRequest, precondition);
+    } catch (RevisionConflictException e) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
+          .id(id)
+          .errorKey(GROUP_USERS_NOT_UPDATED)
+          .errorMessage("The group membership has been updated since it was read")
+          .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
+          .build();
+    }
     c.must(backendCallResult).be(Successful);
 
     //TODO: check if this was a real update in members
     searchPermissionEnqueueService.groupMembersUpdated(id);
 
-    CedarGroupUsers updatedGroupUsers = groupSession.findGroupUsers(gid);
-
-    return Response.ok().entity(updatedGroupUsers).build();
+    VersionedGroupUsers updatedGroupUsers = backendCallResult.getPayload();
+    return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(updatedGroupUsers.revision()))
+        .entity(updatedGroupUsers.content()).build();
   }
 
   @PATCH
