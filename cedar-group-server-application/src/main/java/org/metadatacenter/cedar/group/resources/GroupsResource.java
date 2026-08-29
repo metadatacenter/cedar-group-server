@@ -166,12 +166,19 @@ public class GroupsResource extends AbstractGroupServerResource {
     }
     RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
 
-    FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
+    FolderServerGroup existingGroup = groupSession.findGroupById(gid);
+    if (existingGroup == null) {
+      return groupUpdateTargetDeleted();
+    }
+    requireNonSpecialGroup(existingGroup, gid);
 
     // Only an administrator of this group may rename it. GROUP_UPDATE is held by every user, so it
     // gates nothing on its own; without this check any user could rename any group. Mirrors the check
     // in updateGroupMembers and deleteGroup.
     boolean isAdministrator = groupSession.userAdministersGroup(gid) || c.getCedarUser().has(UPDATE_NOT_ADMINISTERED_GROUP);
+    if (!isAdministrator && groupSession.findGroupById(gid) == null) {
+      return groupUpdateTargetDeleted();
+    }
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
@@ -201,11 +208,11 @@ public class GroupsResource extends AbstractGroupServerResource {
           .build();
     }
 
-    c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
-        new CedarErrorPack()
-            .message("There was an error while updating the group!")
-            .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
-    );
+    if (updatedGroup == null) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
+          .errorMessage("The group was deleted before the update could be applied")
+          .build();
+    }
 
     // BackendCallResult<FolderServerGroup> bcr = groupSession.updateGroup(c, groupSession, id, updateFields);
     // c.must(backendCallResult).be(Successful); // InternalServerError, 404 NotFound, 403 Forbidden if special
@@ -231,14 +238,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     }
   }
 
-  private static FolderServerGroup findNonSpecialGroupById(CedarRequestContext c, GroupServiceSession groupSession, CedarGroupId id) throws CedarException {
-    FolderServerGroup existingGroup = groupSession.findGroupById(id);
-    c.should(existingGroup).be(NonNull).otherwiseNotFound(
-        new CedarErrorPack()
-            .message("The group can not be found by id!")
-            .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
-    );
-
+  private static void requireNonSpecialGroup(FolderServerGroup existingGroup, CedarGroupId id)
+      throws CedarException {
     if (existingGroup.getSpecialGroup() != null) {
       CedarAssertionResult ar = new CedarAssertionResult("Special groups can not be modified!")
           .parameter("id", id)
@@ -246,7 +247,12 @@ public class GroupsResource extends AbstractGroupServerResource {
           .badRequest();
       throw new CedarBackendException(ar);
     }
-    return existingGroup;
+  }
+
+  private static Response groupUpdateTargetDeleted() {
+    return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
+        .errorMessage("The group no longer exists, so the conditional update can not be applied")
+        .build();
   }
 
   @DELETE
@@ -279,6 +285,11 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     boolean isAdministrator = groupSession.userAdministersGroup(gid) || c.getCedarUser().has
         (UPDATE_NOT_ADMINISTERED_GROUP);
+    if (!isAdministrator && groupSession.findGroupById(gid) == null) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
+          .errorMessage("The group was deleted before this deletion could be applied")
+          .build();
+    }
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_DELETED_ONLY_BY_GROUP_ADMIN)
@@ -302,11 +313,11 @@ public class GroupsResource extends AbstractGroupServerResource {
           .errorMessage("The group has been updated since it was read")
           .build();
     }
-    c.should(deleted).be(True).otherwiseInternalServerError(
-        new CedarErrorPack()
-            .message("There was an error while deleting the group!")
-            .operation(CedarOperations.delete(FolderServerGroup.class, "id", id))
-    );
+    if (!deleted) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
+          .errorMessage("The group was deleted before this deletion could be applied")
+          .build();
+    }
 
     searchPermissionEnqueueService.groupDeleted(id);
 
@@ -430,11 +441,18 @@ public class GroupsResource extends AbstractGroupServerResource {
     }
     RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
 
-    FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
+    FolderServerGroup existingGroup = groupSession.findGroupById(gid);
+    if (existingGroup == null) {
+      return groupUpdateTargetDeleted();
+    }
+    requireNonSpecialGroup(existingGroup, gid);
 
     // Only an administrator of this group may change it. As in updateGroup, GROUP_UPDATE alone gates
     // nothing since every user holds it.
     boolean isAdministrator = groupSession.userAdministersGroup(gid) || c.getCedarUser().has(UPDATE_NOT_ADMINISTERED_GROUP);
+    if (!isAdministrator && groupSession.findGroupById(gid) == null) {
+      return groupUpdateTargetDeleted();
+    }
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
@@ -465,6 +483,9 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     if (!updateName && !updateDescription) {
       VersionedResource<FolderServerGroup> snapshot = groupSession.findVersionedGroupById(gid);
+      if (snapshot == null) {
+        return groupUpdateTargetDeleted();
+      }
       if (!precondition.matches(snapshot.revision())) {
         return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
             .parameter("currentETag", RevisionPreconditionParser.format(snapshot.revision()))
@@ -499,11 +520,9 @@ public class GroupsResource extends AbstractGroupServerResource {
           .build();
     }
 
-    c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
-        new CedarErrorPack()
-            .message("There was an error while updating the group!")
-            .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
-    );
+    if (updatedGroup == null) {
+      return groupUpdateTargetDeleted();
+    }
 
     return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(updatedGroup.revision()))
         .entity(updatedGroup.resource()).build();
