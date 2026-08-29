@@ -158,6 +158,14 @@ public class GroupsResource extends AbstractGroupServerResource {
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
+    String ifMatch = c.getIfMatchHeader();
+    if (ifMatch == null || ifMatch.isBlank()) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+          .errorMessage("Updating a group requires the ETag returned by GET in If-Match")
+          .build();
+    }
+    RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
+
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
 
     // Only an administrator of this group may rename it. GROUP_UPDATE is held by every user, so it
@@ -183,7 +191,15 @@ public class GroupsResource extends AbstractGroupServerResource {
     updateFields.put(NodeProperty.NAME, groupName.stringValue());
     updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase());
     updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
-    FolderServerGroup updatedGroup = groupSession.updateGroupById(gid, updateFields);
+    VersionedResource<FolderServerGroup> updatedGroup;
+    try {
+      updatedGroup = groupSession.updateGroupById(gid, updateFields, precondition);
+    } catch (RevisionConflictException e) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
+          .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
+          .errorMessage("The group has been updated since it was read")
+          .build();
+    }
 
     c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
         new CedarErrorPack()
@@ -195,7 +211,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     // c.must(backendCallResult).be(Successful); // InternalServerError, 404 NotFound, 403 Forbidden if special
     // FolderServerGroup existingGroup = bcr.get();
 
-    return Response.ok().entity(updatedGroup).build();
+    return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(updatedGroup.revision()))
+        .entity(updatedGroup.resource()).build();
   }
 
   private static void checkUniqueness(FolderServerGroup otherGroup, FolderServerGroup existingGroup) throws CedarException {
@@ -405,6 +422,14 @@ public class GroupsResource extends AbstractGroupServerResource {
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
+    String ifMatch = c.getIfMatchHeader();
+    if (ifMatch == null || ifMatch.isBlank()) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+          .errorMessage("Updating a group requires the ETag returned by GET in If-Match")
+          .build();
+    }
+    RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
+
     FolderServerGroup existingGroup = findNonSpecialGroupById(c, groupSession, gid);
 
     // Only an administrator of this group may change it. As in updateGroup, GROUP_UPDATE alone gates
@@ -439,7 +464,15 @@ public class GroupsResource extends AbstractGroupServerResource {
         && theyDiffer(existingGroup.getDescription(), groupDescription.stringValue());
 
     if (!updateName && !updateDescription) {
-      return Response.ok().entity(existingGroup).build();
+      VersionedResource<FolderServerGroup> snapshot = groupSession.findVersionedGroupById(gid);
+      if (!precondition.matches(snapshot.revision())) {
+        return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
+            .parameter("currentETag", RevisionPreconditionParser.format(snapshot.revision()))
+            .errorMessage("The group has been updated since it was read")
+            .build();
+      }
+      return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(snapshot.revision()))
+          .entity(snapshot.resource()).build();
     }
 
     // check if the new name is unique
@@ -456,7 +489,15 @@ public class GroupsResource extends AbstractGroupServerResource {
     if (updateDescription) {
       updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
     }
-    FolderServerGroup updatedGroup = groupSession.updateGroupById(gid, updateFields);
+    VersionedResource<FolderServerGroup> updatedGroup;
+    try {
+      updatedGroup = groupSession.updateGroupById(gid, updateFields, precondition);
+    } catch (RevisionConflictException e) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
+          .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
+          .errorMessage("The group has been updated since it was read")
+          .build();
+    }
 
     c.should(updatedGroup).be(NonNull).otherwiseInternalServerError(
         new CedarErrorPack()
@@ -464,7 +505,8 @@ public class GroupsResource extends AbstractGroupServerResource {
             .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
-    return Response.ok().entity(updatedGroup).build();
+    return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(updatedGroup.revision()))
+        .entity(updatedGroup.resource()).build();
   }
 
   private static boolean theyDiffer(String v1, String v2) {

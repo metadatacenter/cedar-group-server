@@ -139,11 +139,22 @@ public class GroupsResourceTest {
     Assertions.assertEquals("Test Group", JsonMapper.MAPPER.readTree(found.body()).get("schema:name").asText());
 
     // Update
-    HttpResponse<String> updated = request("PUT", "/groups/" + encode(groupId),
+    HttpResponse<String> missingPrecondition = request("PUT", "/groups/" + encode(groupId),
         "{\"schema:name\": \"Test Group Renamed\", \"schema:description\": \"Updated description\"}",
         authHeaderAdmin);
+    Assertions.assertEquals(428, missingPrecondition.statusCode(), missingPrecondition.body());
+
+    HttpResponse<String> updated = request("PUT", "/groups/" + encode(groupId),
+        "{\"schema:name\": \"Test Group Renamed\", \"schema:description\": \"Updated description\"}",
+        authHeaderAdmin, "application/json", "\"1\"");
     Assertions.assertEquals(200, updated.statusCode());
+    Assertions.assertEquals("\"2\"", updated.headers().firstValue("ETag").orElse(null));
     Assertions.assertEquals("Test Group Renamed", JsonMapper.MAPPER.readTree(updated.body()).get("schema:name").asText());
+
+    HttpResponse<String> staleUpdate = request("PUT", "/groups/" + encode(groupId),
+        "{\"schema:name\": \"Stale Group Name\", \"schema:description\": \"stale\"}",
+        authHeaderAdmin, "application/json", "\"1\"");
+    Assertions.assertEquals(412, staleUpdate.statusCode(), staleUpdate.body());
 
     // Delete
     HttpResponse<String> staleDelete = request("DELETE", "/groups/" + encode(groupId), null,
@@ -180,7 +191,7 @@ public class GroupsResourceTest {
     String groupId = createGroup("Patch Null Name Group", "a group whose name will be patched away");
 
     HttpResponse<String> patched = request("PATCH", "/groups/" + encode(groupId),
-        "{\"schema:name\": null}", authHeaderAdmin, "application/merge-patch+json");
+        "{\"schema:name\": null}", authHeaderAdmin, "application/merge-patch+json", "\"1\"");
     Assertions.assertEquals(400, patched.statusCode(), "removing the name should be refused: " + patched.body());
 
     HttpResponse<String> after = request("GET", "/groups/" + encode(groupId), null, authHeaderAdmin);
@@ -200,12 +211,14 @@ public class GroupsResourceTest {
     String otherId = createGroup("Rename Source Group", "the group that will try to take it");
 
     HttpResponse<String> put = request("PUT", "/groups/" + encode(otherId),
-        "{\"schema:name\": \"Rename Target Group\", \"schema:description\": \"still trying\"}", authHeaderAdmin);
+        "{\"schema:name\": \"Rename Target Group\", \"schema:description\": \"still trying\"}",
+        authHeaderAdmin, "application/json", "\"1\"");
     Assertions.assertEquals(409, put.statusCode(), "PUT rename collision: " + put.body());
     Assertions.assertTrue(put.body().contains("groupAlreadyPresent"), put.body());
 
     HttpResponse<String> patch = request("PATCH", "/groups/" + encode(otherId),
-        "{\"schema:name\": \"Rename Target Group\"}", authHeaderAdmin, "application/merge-patch+json");
+        "{\"schema:name\": \"Rename Target Group\"}", authHeaderAdmin,
+        "application/merge-patch+json", "\"1\"");
     Assertions.assertEquals(409, patch.statusCode(), "PATCH rename collision: " + patch.body());
     Assertions.assertTrue(patch.body().contains("groupAlreadyPresent"), patch.body());
   }
