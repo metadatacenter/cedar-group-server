@@ -128,12 +128,14 @@ public class GroupsResourceTest {
         "{\"schema:name\": \"Test Group\", \"schema:description\": \"A group created by the integration test\"}",
         authHeaderAdmin);
     Assertions.assertEquals(201, created.statusCode());
+    Assertions.assertEquals("\"1\"", created.headers().firstValue("ETag").orElse(null));
     JsonNode group = JsonMapper.MAPPER.readTree(created.body());
     String groupId = group.get("@id").asText();
 
     // Read back
     HttpResponse<String> found = request("GET", "/groups/" + encode(groupId), null, authHeaderAdmin);
     Assertions.assertEquals(200, found.statusCode());
+    Assertions.assertEquals("\"1\"", found.headers().firstValue("ETag").orElse(null));
     Assertions.assertEquals("Test Group", JsonMapper.MAPPER.readTree(found.body()).get("schema:name").asText());
 
     // Update
@@ -144,7 +146,12 @@ public class GroupsResourceTest {
     Assertions.assertEquals("Test Group Renamed", JsonMapper.MAPPER.readTree(updated.body()).get("schema:name").asText());
 
     // Delete
-    HttpResponse<String> deleted = request("DELETE", "/groups/" + encode(groupId), null, authHeaderAdmin);
+    HttpResponse<String> staleDelete = request("DELETE", "/groups/" + encode(groupId), null,
+        authHeaderAdmin, "application/json", "\"1\"");
+    Assertions.assertEquals(412, staleDelete.statusCode(), staleDelete.body());
+
+    HttpResponse<String> deleted = request("DELETE", "/groups/" + encode(groupId), null,
+        authHeaderAdmin, "application/json", "\"2\"");
     Assertions.assertEquals(204, deleted.statusCode());
 
     HttpResponse<String> gone = request("GET", "/groups/" + encode(groupId), null, authHeaderAdmin);

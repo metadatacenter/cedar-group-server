@@ -21,6 +21,7 @@ import org.metadatacenter.server.GroupServiceSession;
 import org.metadatacenter.server.RevisionConflictException;
 import org.metadatacenter.server.RevisionPrecondition;
 import org.metadatacenter.server.VersionedGroupUsers;
+import org.metadatacenter.server.VersionedResource;
 import org.metadatacenter.server.neo4j.cypher.NodeProperty;
 import org.metadatacenter.server.result.BackendCallResult;
 import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
@@ -111,7 +112,8 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     UriBuilder builder = uriInfo.getAbsolutePathBuilder();
     URI uri = builder.path(CedarUrlUtil.urlEncode(newGroup.getId())).build();
-    return Response.created(uri).entity(newGroup).build();
+    return Response.created(uri).header(HttpHeaders.ETAG, RevisionPreconditionParser.format(1L))
+        .entity(newGroup).build();
   }
 
   @GET
@@ -126,8 +128,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
 
     CedarGroupId gid = CedarGroupId.build(id);
-    FolderServerGroup group = groupSession.findGroupById(gid);
-    c.should(group).be(NonNull).otherwiseNotFound(
+    VersionedResource<FolderServerGroup> snapshot = groupSession.findVersionedGroupById(gid);
+    c.should(snapshot).be(NonNull).otherwiseNotFound(
         new CedarErrorPack()
             .message("The group can not be found by id!")
             .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
@@ -138,7 +140,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     // c.must(backendCallResult).be(Found);
     // FolderServerGroup group = bcr.get();
 
-    return Response.ok().entity(group).build();
+    return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(snapshot.revision()))
+        .entity(snapshot.resource()).build();
   }
 
   @PUT
@@ -267,7 +270,21 @@ public class GroupsResource extends AbstractGroupServerResource {
     );
 
 
-    boolean deleted = groupSession.deleteGroupById(gid);
+    String ifMatch = c.getIfMatchHeader();
+    if (ifMatch == null || ifMatch.isBlank()) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+          .errorMessage("Deleting a group requires the ETag returned by GET in If-Match")
+          .build();
+    }
+    boolean deleted;
+    try {
+      deleted = groupSession.deleteGroupById(gid, RevisionPreconditionParser.parse(ifMatch));
+    } catch (RevisionConflictException e) {
+      return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
+          .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
+          .errorMessage("The group has been updated since it was read")
+          .build();
+    }
     c.should(deleted).be(True).otherwiseInternalServerError(
         new CedarErrorPack()
             .message("There was an error while deleting the group!")
