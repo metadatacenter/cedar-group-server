@@ -74,21 +74,21 @@ public class GroupServerApplicationSmokeTest {
   }
 
   /**
-   * The group server ships no API spec, so it neither advertises documentation nor serves any.
+   * The group server ships an API spec, so it advertises the documentation links and serves the
+   * document.
    *
-   * <p>Both used to happen regardless: the asset bundle was registered from shared library code
-   * whether or not the service had a document, and the index resource advertised swagger.json and
-   * the Swagger UI from the root of every service, so on a service with no spec a caller followed
-   * either link to a 404. This holds the quiet side of that gate. It held here after the repo
-   * server, which held it before, gained a spec of its own; the loud side is held by
-   * {@code RepoServerApplicationSmokeTest} and by the terminology and artifact servers.
+   * <p>It held the quiet side of the documentation gate until its resource classes were annotated.
+   * That side is now held by {@code SchemaServerApplicationSmokeTest}: the schema server declares no
+   * resource classes at all, so it has nothing to document and will stay on that side.
    */
   @Test
-  public void noApiDocumentationIsAdvertisedOrServed() throws Exception {
-    Assertions.assertFalse(get("/").body().contains("apiDocs"),
-        "A service with no spec should advertise no documentation links");
-    Assertions.assertEquals(404, get("/swagger-api/swagger.json").statusCode(),
-        "A service with no spec should serve nothing at the spec path");
+  public void apiDocumentationIsAdvertisedAndServed() throws Exception {
+    Assertions.assertTrue(get("/").body().contains("apiDocs"),
+        "A service with a spec should advertise its documentation");
+
+    HttpResponse<String> spec = get("/swagger-api/swagger.json");
+    Assertions.assertEquals(200, spec.statusCode(), "The advertised spec path should serve the document");
+    Assertions.assertTrue(spec.body().contains("openapi"), "The document served should be an OpenAPI spec");
   }
 
   @Test
