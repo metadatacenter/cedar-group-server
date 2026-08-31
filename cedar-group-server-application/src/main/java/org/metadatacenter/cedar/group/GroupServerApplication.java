@@ -4,7 +4,7 @@ import io.dropwizard.core.setup.Bootstrap;
 import io.dropwizard.core.setup.Environment;
 import io.dropwizard.lifecycle.Managed;
 import org.metadatacenter.cedar.group.resources.GroupsResource;
-import org.metadatacenter.cedar.group.resources.IndexResource;
+import org.metadatacenter.cedar.util.dw.CedarMicroserviceIndexResource;
 import org.metadatacenter.cedar.util.dw.CedarDefaultHealthCheck;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication;
 import org.metadatacenter.config.CedarConfig;
@@ -49,7 +49,8 @@ public class GroupServerApplication extends CedarMicroserviceApplication<GroupSe
       }
     });
 
-    final IndexResource index = new IndexResource(cedarConfig);
+    final CedarMicroserviceIndexResource index =
+        new CedarMicroserviceIndexResource(cedarConfig, getServerName());
     environment.jersey().register(index);
 
     final GroupsResource groups = new GroupsResource(cedarConfig);
