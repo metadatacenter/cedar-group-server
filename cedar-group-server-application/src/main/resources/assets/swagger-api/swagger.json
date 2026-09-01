@@ -3,7 +3,7 @@
   "info" : {
     "description" : "Better Metadata - Better Science\n\nThe group server manages the groups CEDAR shares content with. A group is a name, a description,\na set of members, and a set of administrators; permissions elsewhere in CEDAR are granted to groups\nas well as to individual users.\n\nGroups and their memberships use strong ETags. Read the group, or its members, and send the ETag\nback in If-Match when changing or deleting it: a missing precondition returns 428 and a stale one\n412. Only an administrator of a group may change it, and the built-in special groups cannot be\nchanged at all.\n",
     "title" : "CEDAR Group Server API",
-    "version" : "2.9.5-SNAPSHOT"
+    "version" : "2.9.5"
   },
   "paths" : {
     "/groups" : {
