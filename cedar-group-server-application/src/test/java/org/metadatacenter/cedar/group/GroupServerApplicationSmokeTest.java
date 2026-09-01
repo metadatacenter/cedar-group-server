@@ -32,11 +32,11 @@ public class GroupServerApplicationSmokeTest {
 
   static {
     // Must run before the test support boots the server, which reads the port env vars.
-    // Alternate server ports, so the test instance never collides with a running dev server.
+    // OS-assigned server ports, so the test instance never collides with a running dev server.
     Map<String, String> environment = new HashMap<>(CedarEnvironmentSource.getAll());
-    environment.put("CEDAR_GROUP_HTTP_PORT", "19009");
-    environment.put("CEDAR_GROUP_ADMIN_PORT", "19109");
-    environment.put("CEDAR_GROUP_STOP_PORT", "19209");
+    environment.put("CEDAR_GROUP_HTTP_PORT", "0");
+    environment.put("CEDAR_GROUP_ADMIN_PORT", "0");
+    environment.put("CEDAR_GROUP_STOP_PORT", "0");
     environment.put("CEDAR_NEO4J_HOST", "127.0.0.1");
     environment.put("CEDAR_NEO4J_BOLT_PORT", "1");
     CedarEnvironmentSource.setOverride(environment);
@@ -71,6 +71,24 @@ public class GroupServerApplicationSmokeTest {
       request.headers(headers);
     }
     return CLIENT.send(request.build(), HttpResponse.BodyHandlers.ofString());
+  }
+
+  /**
+   * The group server ships an API spec, so it advertises the documentation links and serves the
+   * document.
+   *
+   * <p>It held the quiet side of the documentation gate until its resource classes were annotated.
+   * That side is now held by {@code SchemaServerApplicationSmokeTest}: the schema server declares no
+   * resource classes at all, so it has nothing to document and will stay on that side.
+   */
+  @Test
+  public void apiDocumentationIsAdvertisedAndServed() throws Exception {
+    Assertions.assertTrue(get("/").body().contains("apiDocs"),
+        "A service with a spec should advertise its documentation");
+
+    HttpResponse<String> spec = get("/swagger-api/swagger.json");
+    Assertions.assertEquals(200, spec.statusCode(), "The advertised spec path should serve the document");
+    Assertions.assertTrue(spec.body().contains("openapi"), "The document served should be an OpenAPI spec");
   }
 
   @Test

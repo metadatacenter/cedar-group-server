@@ -59,11 +59,11 @@ public class GroupMembershipAuthorizationMatrixTest {
 
   static {
     // Must run before the test support boots the server, which reads the Neo4j env vars. Ports are
-    // distinct from the dev server and from the other booting test class in this module.
+    // assigned by the OS, so they cannot collide with the dev server or the other test in this module.
     EmbeddedCedarNeo4j.startAndRedirectEnvironment(Map.of(
-        "CEDAR_GROUP_HTTP_PORT", "19036",
-        "CEDAR_GROUP_ADMIN_PORT", "19136",
-        "CEDAR_GROUP_STOP_PORT", "19236",
+        "CEDAR_GROUP_HTTP_PORT", "0",
+        "CEDAR_GROUP_ADMIN_PORT", "0",
+        "CEDAR_GROUP_STOP_PORT", "0",
         "CEDAR_REDIS_PERSISTENT_PORT", "1"));
   }
 
@@ -112,7 +112,7 @@ public class GroupMembershipAuthorizationMatrixTest {
     membership.getUsers().add(new CedarGroupUserRequest(new ResourcePermissionUser(user2.getId()), false, true));
     unchangedMembershipBody = JsonMapper.MAPPER.writeValueAsString(membership);
 
-    HttpResponse<String> seeded = send("PUT", groupUsersPath, unchangedMembershipBody, adminHeader);
+    HttpResponse<String> seeded = send("PUT", groupUsersPath, unchangedMembershipBody, adminHeader, "*");
     Assertions.assertEquals(200, seeded.statusCode(),
         "the fixture membership was not established: " + seeded.body());
   }
@@ -129,6 +129,7 @@ public class GroupMembershipAuthorizationMatrixTest {
     // The boundary. OTHER_USER is a member of this group, so this row is the one the existing matrix
     // could not ask: being in the group must not carry the power to decide who else is.
     matrix.when("PUT", groupUsersPath, unchangedMembershipBody)
+        .header("If-Match", "*")
         .expect(ANONYMOUS, 401)
         .expect(OTHER_USER, 403)   // a member, and refused
         .expect(OWNER, 403)        // neither member nor administrator
@@ -175,11 +176,19 @@ public class GroupMembershipAuthorizationMatrixTest {
 
   private static HttpResponse<String> send(String method, String path, String body, String authHeader)
       throws Exception {
+    return send(method, path, body, authHeader, null);
+  }
+
+  private static HttpResponse<String> send(String method, String path, String body, String authHeader,
+                                           String ifMatch) throws Exception {
     HttpRequest.Builder builder = HttpRequest.newBuilder()
         .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + path))
         .header("Content-Type", "application/json");
     if (authHeader != null) {
       builder.header("Authorization", authHeader);
+    }
+    if (ifMatch != null) {
+      builder.header("If-Match", ifMatch);
     }
     builder.method(method, body == null
         ? HttpRequest.BodyPublishers.noBody()

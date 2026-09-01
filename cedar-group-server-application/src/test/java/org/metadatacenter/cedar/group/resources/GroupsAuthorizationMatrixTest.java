@@ -47,12 +47,12 @@ public class GroupsAuthorizationMatrixTest {
 
   static {
     // Must run before the test support boots the server, which reads the Neo4j env vars. Ports are
-    // distinct from the dev server and from every other booting test class. Redis goes to a dead
+    // assigned by the OS, so they cannot collide with the dev server or another test. Redis goes to a dead
     // port: no endpoint under test depends on a live Redis.
     EmbeddedCedarNeo4j.startAndRedirectEnvironment(Map.of(
-        "CEDAR_GROUP_HTTP_PORT", "19026",
-        "CEDAR_GROUP_ADMIN_PORT", "19126",
-        "CEDAR_GROUP_STOP_PORT", "19226",
+        "CEDAR_GROUP_HTTP_PORT", "0",
+        "CEDAR_GROUP_ADMIN_PORT", "0",
+        "CEDAR_GROUP_STOP_PORT", "0",
         "CEDAR_REDIS_PERSISTENT_PORT", "1"));
   }
 

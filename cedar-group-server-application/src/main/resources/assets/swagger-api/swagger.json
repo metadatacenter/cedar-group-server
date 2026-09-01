@@ -1,0 +1,408 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "description" : "Better Metadata - Better Science\n\nThe group server manages the groups CEDAR shares content with. A group is a name, a description,\na set of members, and a set of administrators; permissions elsewhere in CEDAR are granted to groups\nas well as to individual users.\n\nGroups and their memberships use strong ETags. Read the group, or its members, and send the ETag\nback in If-Match when changing or deleting it: a missing precondition returns 428 and a stale one\n412. Only an administrator of a group may change it, and the built-in special groups cannot be\nchanged at all.\n",
+    "title" : "CEDAR Group Server API",
+    "version" : "2.9.4"
+  },
+  "paths" : {
+    "/groups" : {
+      "get" : {
+        "description" : "Return every group in the system. Groups are visible to anyone who may read them; membership is not what decides whether a group is listed.",
+        "operationId" : "findGroups",
+        "responses" : {
+          "200" : {
+            "description" : "Every group"
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "The caller lacks the group read permission"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "List all groups",
+        "tags" : [ "Groups" ]
+      },
+      "post" : {
+        "description" : "Create a group from a name and a description. Names are unique, so a name already in use is refused rather than resolved.",
+        "operationId" : "createGroup",
+        "responses" : {
+          "201" : {
+            "description" : "The group as created",
+            "headers" : {
+              "ETag" : {
+                "description" : "Strong validator for the group's current revision.",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              },
+              "Location" : {
+                "description" : "URL of the new group.",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "description" : "The name or the description is missing"
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "The caller lacks the group create permission"
+          },
+          "409" : {
+            "description" : "A group of that name already exists"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Create a group",
+        "tags" : [ "Groups" ]
+      }
+    },
+    "/groups/{id}" : {
+      "delete" : {
+        "description" : "Remove a group. Only an administrator of the group may change it. The group-update permission every user holds does not gate this on its own. The built-in special groups cannot be deleted.",
+        "operationId" : "deleteGroup",
+        "parameters" : [ {
+          "description" : "The group's current ETag, as returned by GET. A write without it is refused with 428, and a stale one with 412, so a change can not silently overwrite one that landed since the group was read.",
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Group identifier.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Deleted"
+          },
+          "400" : {
+            "description" : "The group is a special group"
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "The caller does not administer this group"
+          },
+          "404" : {
+            "description" : "No such group"
+          },
+          "412" : {
+            "description" : "The If-Match value is stale, or the group has since been deleted"
+          },
+          "428" : {
+            "description" : "Deleting a group requires its current ETag in If-Match"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Delete a group",
+        "tags" : [ "Groups" ]
+      },
+      "get" : {
+        "description" : "Return one group. The ETag it carries is what a later update or delete must supply in If-Match.",
+        "operationId" : "findGroup",
+        "parameters" : [ {
+          "description" : "Group identifier.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The group",
+            "headers" : {
+              "ETag" : {
+                "description" : "Strong validator for the group's current revision.",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              }
+            }
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "The caller lacks the group read permission"
+          },
+          "404" : {
+            "description" : "No such group"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Get a group",
+        "tags" : [ "Groups" ]
+      },
+      "patch" : {
+        "description" : "Change a group's name or description with a JSON merge patch, leaving anything the patch does not mention alone. Only an administrator of the group may change it. The group-update permission every user holds does not gate this on its own. The built-in special groups cannot be changed.",
+        "operationId" : "patchGroup",
+        "parameters" : [ {
+          "description" : "The group's current ETag, as returned by GET. A write without it is refused with 428, and a stale one with 412, so a change can not silently overwrite one that landed since the group was read.",
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Group identifier.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The group as patched",
+            "headers" : {
+              "ETag" : {
+                "description" : "Strong validator for the group's current revision.",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "description" : "The patch is not well formed, or the group is a special group"
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "The caller does not administer this group"
+          },
+          "404" : {
+            "description" : "No such group"
+          },
+          "412" : {
+            "description" : "The If-Match value is stale, or the group has since been deleted"
+          },
+          "428" : {
+            "description" : "Patching a group requires its current ETag in If-Match"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Change part of a group",
+        "tags" : [ "Groups" ]
+      },
+      "put" : {
+        "description" : "Change a group's name or description. Only an administrator of the group may change it. The group-update permission every user holds does not gate this on its own. The built-in special groups cannot be changed at all.",
+        "operationId" : "updateGroup",
+        "parameters" : [ {
+          "description" : "The group's current ETag, as returned by GET. A write without it is refused with 428, and a stale one with 412, so a change can not silently overwrite one that landed since the group was read.",
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Group identifier.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The group as updated",
+            "headers" : {
+              "ETag" : {
+                "description" : "Strong validator for the group's current revision.",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              }
+            }
+          },
+          "400" : {
+            "description" : "Nothing to change, or the group is a special group"
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "The caller does not administer this group"
+          },
+          "404" : {
+            "description" : "No such group"
+          },
+          "412" : {
+            "description" : "The If-Match value is stale, or the group has since been deleted"
+          },
+          "428" : {
+            "description" : "Updating a group requires its current ETag in If-Match"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Rename a group",
+        "tags" : [ "Groups" ]
+      }
+    },
+    "/groups/{id}/users" : {
+      "get" : {
+        "description" : "Return the group's members and its administrators. The ETag is over the membership, so it is what a membership update must supply, not the group's own.",
+        "operationId" : "getGroupMembers",
+        "parameters" : [ {
+          "description" : "Group identifier.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The group's members and administrators",
+            "headers" : {
+              "ETag" : {
+                "description" : "\"Strong validator for the membership's current revision.\"",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              }
+            }
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "The caller lacks the group read permission"
+          },
+          "404" : {
+            "description" : "No such group"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "List a group's members",
+        "tags" : [ "Groups" ]
+      },
+      "put" : {
+        "description" : "Set who belongs to the group and who administers it. This replaces the membership rather than adding to it. Only an administrator of the group may change it. The group-update permission every user holds does not gate this on its own.",
+        "operationId" : "updateGroupMembers",
+        "parameters" : [ {
+          "description" : "The membership's current ETag, as returned by the members listing. A write without it is refused with 428, and a stale one with 412.",
+          "in" : "header",
+          "name" : "If-Match",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Group identifier.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The membership as updated"
+          },
+          "400" : {
+            "description" : "The membership in the body is not well formed"
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "The caller does not administer this group"
+          },
+          "404" : {
+            "description" : "No such group"
+          },
+          "412" : {
+            "description" : "The If-Match value is stale, or the group has since been deleted"
+          },
+          "428" : {
+            "description" : "Changing a membership requires its current ETag in If-Match"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Replace a group's members",
+        "tags" : [ "Groups" ]
+      }
+    }
+  },
+  "components" : {
+    "securitySchemes" : {
+      "api_key" : {
+        "description" : "Your CEDAR API key, using the format 'apiKey <yourApiKey>'",
+        "in" : "header",
+        "name" : "Authorization",
+        "type" : "apiKey"
+      }
+    }
+  }
+}
