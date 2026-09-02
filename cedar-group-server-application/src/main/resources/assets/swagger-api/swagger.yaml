@@ -12,7 +12,7 @@ info:
     412. Only an administrator of a group may change it, and the built-in special groups cannot be
     changed at all.
   title: CEDAR Group Server API
-  version: 2.9.6-SNAPSHOT
+  version: 2.9.6
 paths:
   /groups:
     get:
