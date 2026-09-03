@@ -279,7 +279,7 @@ paths:
       description: Set who belongs to the group and who administers it. This replaces
         the membership rather than adding to it. Only an administrator of the group
         may change it. The group-update permission every user holds does not gate
-        this on its own.
+        this on its own. The built-in special groups cannot be changed.
       operationId: updateGroupMembers
       parameters:
       - description: "The membership's current ETag, as returned by the members listing.\
@@ -299,7 +299,8 @@ paths:
         "200":
           description: The membership as updated
         "400":
-          description: The membership in the body is not well formed
+          description: "The membership in the body is not well formed, or the group\
+            \ is a special group"
         "401":
           description: Unauthorized
         "403":

@@ -459,14 +459,16 @@ public class GroupsResource extends AbstractGroupServerResource {
   @Path("/{id}/users")
   @Operation(summary = "Replace a group's members",
       description = "Set who belongs to the group and who administers it. This replaces the "
-          + "membership rather than adding to it. Only an administrator of the group may change it. The group-update permission every user holds does not gate this on its own.",
+          + "membership rather than adding to it. Only an administrator of the group may change it. "
+          + "The group-update permission every user holds does not gate this on its own. The built-in "
+          + "special groups cannot be changed.",
       parameters = @Parameter(in = ParameterIn.HEADER, name = "If-Match", required = true,
           description = "The membership's current ETag, as returned by the members listing. A write "
               + "without it is refused with 428, and a stale one with 412.",
           schema = @Schema(type = "string")))
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The membership as updated"),
-      @ApiResponse(responseCode = "400", description = "The membership in the body is not well formed"),
+      @ApiResponse(responseCode = "400", description = "The membership in the body is not well formed, or the group is a special group"),
       @ApiResponse(responseCode = "401", description = "Unauthorized"),
       @ApiResponse(responseCode = "403", description = "The caller does not administer this group"),
       @ApiResponse(responseCode = "404", description = "No such group"),
@@ -491,6 +493,7 @@ public class GroupsResource extends AbstractGroupServerResource {
             .message("The group can not be found by id!")
             .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
     );
+    requireNonSpecialGroup(group, gid);
 
     boolean isAdministrator = groupSession.userAdministersGroup(gid) || c.getCedarUser().has
         (UPDATE_NOT_ADMINISTERED_GROUP);
