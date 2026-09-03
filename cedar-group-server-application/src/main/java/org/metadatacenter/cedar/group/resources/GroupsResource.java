@@ -5,7 +5,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -79,7 +81,8 @@ public class GroupsResource extends AbstractGroupServerResource {
       description = "Return every group in the system. Groups are visible to anyone who may read "
           + "them; membership is not what decides whether a group is listed.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Every group"),
+      @ApiResponse(responseCode = "200", description = "Every group",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/GroupList"))),
       @ApiResponse(responseCode = "401", description = "Unauthorized"),
       @ApiResponse(responseCode = "403", description = "The caller lacks the group read permission"),
       @ApiResponse(responseCode = "500", description = "Internal server error")
@@ -104,8 +107,12 @@ public class GroupsResource extends AbstractGroupServerResource {
   @Operation(summary = "Create a group",
       description = "Create a group from a name and a description. Names are unique, so a name "
           + "already in use is refused rather than resolved.")
+  @RequestBody(description = "The new group's name and description", required = true,
+      content = @Content(mediaType = MediaType.APPLICATION_JSON,
+          schema = @Schema(ref = "#/components/schemas/GroupWriteRequest")))
   @ApiResponses({
       @ApiResponse(responseCode = "201", description = "The group as created",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/Group")),
           headers = {
               @Header(name = "Location", description = "URL of the new group.", schema = @Schema(type = "string")),
               @Header(name = "ETag", description = "Strong validator for the group's current revision.", schema = @Schema(type = "string"))
@@ -159,6 +166,7 @@ public class GroupsResource extends AbstractGroupServerResource {
           + "supply in If-Match.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The group",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/Group")),
           headers = @Header(name = "ETag", description = "Strong validator for the group's current revision.", schema = @Schema(type = "string"))),
       @ApiResponse(responseCode = "401", description = "Unauthorized"),
       @ApiResponse(responseCode = "403", description = "The caller lacks the group read permission"),
@@ -202,8 +210,12 @@ public class GroupsResource extends AbstractGroupServerResource {
           description = "The group's current ETag, as returned by GET. A write without it is refused with "
               + "428, and a stale one with 412, so a change can not silently overwrite one that "
               + "landed since the group was read.", schema = @Schema(type = "string")))
+  @RequestBody(description = "The replacement name and description", required = true,
+      content = @Content(mediaType = MediaType.APPLICATION_JSON,
+          schema = @Schema(ref = "#/components/schemas/GroupWriteRequest")))
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The group as updated",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/Group")),
           headers = @Header(name = "ETag", description = "Strong validator for the group's current revision.", schema = @Schema(type = "string"))),
       @ApiResponse(responseCode = "400", description = "Nothing to change, or the group is a special group"),
       @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -418,6 +430,7 @@ public class GroupsResource extends AbstractGroupServerResource {
           + "membership, so it is what a membership update must supply, not the group's own.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The group's members and administrators",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/GroupMembership")),
           headers = @Header(name = "ETag", description = "\"Strong validator for the membership's current revision.\"",
               schema = @Schema(type = "string"))),
       @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -466,8 +479,12 @@ public class GroupsResource extends AbstractGroupServerResource {
           description = "The membership's current ETag, as returned by the members listing. A write "
               + "without it is refused with 428, and a stale one with 412.",
           schema = @Schema(type = "string")))
+  @RequestBody(description = "The complete replacement membership", required = true,
+      content = @Content(mediaType = MediaType.APPLICATION_JSON,
+          schema = @Schema(ref = "#/components/schemas/GroupMembership")))
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "The membership as updated"),
+      @ApiResponse(responseCode = "200", description = "The membership as updated",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/GroupMembership"))),
       @ApiResponse(responseCode = "400", description = "The membership in the body is not well formed, or the group is a special group"),
       @ApiResponse(responseCode = "401", description = "Unauthorized"),
       @ApiResponse(responseCode = "403", description = "The caller does not administer this group"),
@@ -550,8 +567,12 @@ public class GroupsResource extends AbstractGroupServerResource {
           description = "The group's current ETag, as returned by GET. A write without it is refused with "
               + "428, and a stale one with 412, so a change can not silently overwrite one that "
               + "landed since the group was read.", schema = @Schema(type = "string")))
+  @RequestBody(description = "The group properties to replace or remove", required = true,
+      content = @Content(mediaType = CONTENT_TYPE_APPLICATION_MERGE_PATCH_JSON,
+          schema = @Schema(ref = "#/components/schemas/GroupPatchRequest")))
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The group as patched",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/Group")),
           headers = @Header(name = "ETag", description = "Strong validator for the group's current revision.", schema = @Schema(type = "string"))),
       @ApiResponse(responseCode = "400", description = "The patch is not well formed, or the group is a special group"),
       @ApiResponse(responseCode = "401", description = "Unauthorized"),

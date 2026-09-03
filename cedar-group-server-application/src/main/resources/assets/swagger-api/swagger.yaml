@@ -21,6 +21,10 @@ paths:
       operationId: findGroups
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupList"
           description: Every group
         "401":
           description: Unauthorized
@@ -37,8 +41,19 @@ paths:
       description: "Create a group from a name and a description. Names are unique,\
         \ so a name already in use is refused rather than resolved."
       operationId: createGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupWriteRequest"
+        description: The new group's name and description
+        required: true
       responses:
         "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
           description: The group as created
           headers:
             ETag:
@@ -122,6 +137,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
           description: The group
           headers:
             ETag:
@@ -163,8 +182,19 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: "#/components/schemas/GroupPatchRequest"
+        description: The group properties to replace or remove
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
           description: The group as patched
           headers:
             ETag:
@@ -212,8 +242,19 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupWriteRequest"
+        description: The replacement name and description
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
           description: The group as updated
           headers:
             ETag:
@@ -255,6 +296,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupMembership"
           description: The group's members and administrators
           headers:
             ETag:
@@ -295,8 +340,19 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupMembership"
+        description: The complete replacement membership
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupMembership"
           description: The membership as updated
         "400":
           description: "The membership in the body is not well formed, or the group\
@@ -319,6 +375,138 @@ paths:
       tags:
       - Groups
 components:
+  schemas:
+    Group:
+      type: object
+      additionalProperties: false
+      properties:
+        '@context':
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+        '@id':
+          type: string
+          format: uri
+        createdOnTS:
+          type: integer
+          format: int64
+        lastUpdatedOnTS:
+          type: integer
+          format: int64
+        oslc:modifiedBy:
+          type: string
+          format: uri
+        pav:createdBy:
+          type: string
+          format: uri
+        pav:createdOn:
+          type: string
+          format: date-time
+        pav:lastUpdatedOn:
+          type: string
+          format: date-time
+        resourceType:
+          type: string
+          enum:
+          - group
+        schema:description:
+          type: string
+          nullable: true
+        schema:identifier:
+          type: string
+          nullable: true
+        schema:name:
+          type: string
+        sourceHash:
+          type: string
+          nullable: true
+        specialGroup:
+          type: string
+          nullable: true
+      required:
+      - '@id'
+      - resourceType
+      - schema:name
+    GroupList:
+      type: object
+      additionalProperties: false
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/Group"
+      required:
+      - groups
+    GroupMember:
+      type: object
+      additionalProperties: true
+      properties:
+        administrator:
+          type: boolean
+        member:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/GroupMemberUser"
+      required:
+      - administrator
+      - member
+      - user
+    GroupMemberUser:
+      type: object
+      additionalProperties: true
+      properties:
+        '@id':
+          type: string
+          format: uri
+        email:
+          type: string
+          format: email
+          readOnly: true
+        firstName:
+          type: string
+          readOnly: true
+        lastName:
+          type: string
+          readOnly: true
+      required:
+      - '@id'
+    GroupMembership:
+      type: object
+      additionalProperties: false
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupMember"
+      required:
+      - users
+    GroupPatchRequest:
+      type: object
+      additionalProperties: true
+      description: A JSON merge patch for the mutable group properties.
+      minProperties: 1
+      properties:
+        schema:description:
+          type: string
+          description: Null removes the description.
+          nullable: true
+        schema:name:
+          type: string
+          description: Renames the group; null is refused because a group must have
+            a name.
+    GroupWriteRequest:
+      type: object
+      additionalProperties: true
+      description: A complete group name and description used for creation or replacement.
+      properties:
+        schema:description:
+          type: string
+        schema:name:
+          type: string
+      required:
+      - schema:description
+      - schema:name
   securitySchemes:
     api_key:
       description: "Your CEDAR API key, using the format 'apiKey <yourApiKey>'"
