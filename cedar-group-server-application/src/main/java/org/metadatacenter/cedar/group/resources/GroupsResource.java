@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.dropwizard.jersey.PATCH;
+import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.error.CedarAssertionResult;
@@ -83,9 +84,9 @@ public class GroupsResource extends AbstractGroupServerResource {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Every group",
           content = @Content(schema = @Schema(ref = "#/components/schemas/GroupList"))),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the group read permission"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the group read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response findGroups() throws CedarException {
     CedarRequestContext c = buildRequestContext();
@@ -117,11 +118,11 @@ public class GroupsResource extends AbstractGroupServerResource {
               @Header(name = "Location", description = "URL of the new group.", schema = @Schema(type = "string")),
               @Header(name = "ETag", description = "Strong validator for the group's current revision.", schema = @Schema(type = "string"))
           }),
-      @ApiResponse(responseCode = "400", description = "The name or the description is missing"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the group create permission"),
-      @ApiResponse(responseCode = "409", description = "A group of that name already exists"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The name or the description is missing"),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the group create permission"),
+      @ApiResponse(responseCode = "409", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "A group of that name already exists"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response createGroup() throws CedarException {
     CedarRequestContext c = buildRequestContext();
@@ -168,10 +169,10 @@ public class GroupsResource extends AbstractGroupServerResource {
       @ApiResponse(responseCode = "200", description = "The group",
           content = @Content(schema = @Schema(ref = "#/components/schemas/Group")),
           headers = @Header(name = "ETag", description = "Strong validator for the group's current revision.", schema = @Schema(type = "string"))),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the group read permission"),
-      @ApiResponse(responseCode = "404", description = "No such group"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the group read permission"),
+      @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No such group"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response findGroup(
       @Parameter(description = "Group identifier.", required = true)
@@ -217,13 +218,13 @@ public class GroupsResource extends AbstractGroupServerResource {
       @ApiResponse(responseCode = "200", description = "The group as updated",
           content = @Content(schema = @Schema(ref = "#/components/schemas/Group")),
           headers = @Header(name = "ETag", description = "Strong validator for the group's current revision.", schema = @Schema(type = "string"))),
-      @ApiResponse(responseCode = "400", description = "Nothing to change, or the group is a special group"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller does not administer this group"),
-      @ApiResponse(responseCode = "404", description = "No such group"),
-      @ApiResponse(responseCode = "412", description = "The If-Match value is stale, or the group has since been deleted"),
-      @ApiResponse(responseCode = "428", description = "Updating a group requires its current ETag in If-Match"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Nothing to change, or the group is a special group"),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller does not administer this group"),
+      @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No such group"),
+      @ApiResponse(responseCode = "412", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The If-Match value is stale, or the group has since been deleted"),
+      @ApiResponse(responseCode = "428", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Updating a group requires its current ETag in If-Match"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response updateGroup(
       @Parameter(description = "Group identifier.", required = true)
@@ -346,13 +347,13 @@ public class GroupsResource extends AbstractGroupServerResource {
               + "landed since the group was read.", schema = @Schema(type = "string")))
   @ApiResponses({
       @ApiResponse(responseCode = "204", description = "Deleted"),
-      @ApiResponse(responseCode = "400", description = "The group is a special group"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller does not administer this group"),
-      @ApiResponse(responseCode = "404", description = "No such group"),
-      @ApiResponse(responseCode = "412", description = "The If-Match value is stale, or the group has since been deleted"),
-      @ApiResponse(responseCode = "428", description = "Deleting a group requires its current ETag in If-Match"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The group is a special group"),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller does not administer this group"),
+      @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No such group"),
+      @ApiResponse(responseCode = "412", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The If-Match value is stale, or the group has since been deleted"),
+      @ApiResponse(responseCode = "428", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Deleting a group requires its current ETag in If-Match"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response deleteGroup(
       @Parameter(description = "Group identifier.", required = true)
@@ -433,10 +434,10 @@ public class GroupsResource extends AbstractGroupServerResource {
           content = @Content(schema = @Schema(ref = "#/components/schemas/GroupMembership")),
           headers = @Header(name = "ETag", description = "\"Strong validator for the membership's current revision.\"",
               schema = @Schema(type = "string"))),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the group read permission"),
-      @ApiResponse(responseCode = "404", description = "No such group"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the group read permission"),
+      @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No such group"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getGroupMembers(
       @Parameter(description = "Group identifier.", required = true)
@@ -485,13 +486,13 @@ public class GroupsResource extends AbstractGroupServerResource {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The membership as updated",
           content = @Content(schema = @Schema(ref = "#/components/schemas/GroupMembership"))),
-      @ApiResponse(responseCode = "400", description = "The membership in the body is not well formed, or the group is a special group"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller does not administer this group"),
-      @ApiResponse(responseCode = "404", description = "No such group"),
-      @ApiResponse(responseCode = "412", description = "The If-Match value is stale, or the group has since been deleted"),
-      @ApiResponse(responseCode = "428", description = "Changing a membership requires its current ETag in If-Match"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The membership in the body is not well formed, or the group is a special group"),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller does not administer this group"),
+      @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No such group"),
+      @ApiResponse(responseCode = "412", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The If-Match value is stale, or the group has since been deleted"),
+      @ApiResponse(responseCode = "428", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Changing a membership requires its current ETag in If-Match"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response updateGroupMembers(
       @Parameter(description = "Group identifier.", required = true)
@@ -574,13 +575,13 @@ public class GroupsResource extends AbstractGroupServerResource {
       @ApiResponse(responseCode = "200", description = "The group as patched",
           content = @Content(schema = @Schema(ref = "#/components/schemas/Group")),
           headers = @Header(name = "ETag", description = "Strong validator for the group's current revision.", schema = @Schema(type = "string"))),
-      @ApiResponse(responseCode = "400", description = "The patch is not well formed, or the group is a special group"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller does not administer this group"),
-      @ApiResponse(responseCode = "404", description = "No such group"),
-      @ApiResponse(responseCode = "412", description = "The If-Match value is stale, or the group has since been deleted"),
-      @ApiResponse(responseCode = "428", description = "Patching a group requires its current ETag in If-Match"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The patch is not well formed, or the group is a special group"),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller does not administer this group"),
+      @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No such group"),
+      @ApiResponse(responseCode = "412", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The If-Match value is stale, or the group has since been deleted"),
+      @ApiResponse(responseCode = "428", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Patching a group requires its current ETag in If-Match"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response patchGroup(
       @Parameter(description = "Group identifier.", required = true)
