@@ -381,4 +381,32 @@ public class GroupsResourceTest {
     Assertions.assertEquals(400, deleted.statusCode());
   }
 
+  @Test
+  public void everybodyGroupMembershipCanNotBeReplaced() throws Exception {
+    HttpResponse<String> groups = request("GET", "/groups", null, authHeaderAdmin);
+    JsonNode groupList = JsonMapper.MAPPER.readTree(groups.body()).get("groups");
+    String everybodyId = null;
+    for (JsonNode group : groupList) {
+      if ("Everybody".equals(group.get("schema:name").asText())) {
+        everybodyId = group.get("@id").asText();
+      }
+    }
+    Assertions.assertNotNull(everybodyId, "The Everybody group must exist");
+
+    String usersPath = "/groups/" + encode(everybodyId) + "/users";
+    HttpResponse<String> before = request("GET", usersPath, null, authHeaderAdmin);
+    Assertions.assertEquals(200, before.statusCode(), before.body());
+
+    HttpResponse<String> replaced = request("PUT", usersPath, "{\"users\": []}",
+        authHeaderAdmin, "application/json", "*");
+    Assertions.assertEquals(400, replaced.statusCode(), replaced.body());
+
+    HttpResponse<String> after = request("GET", usersPath, null, authHeaderAdmin);
+    Assertions.assertEquals(200, after.statusCode(), after.body());
+    Assertions.assertEquals(before.body(), after.body(),
+        "the refused replacement must leave Everybody's membership unchanged");
+    Assertions.assertEquals(before.headers().firstValue("ETag"), after.headers().firstValue("ETag"),
+        "the refused replacement must not advance Everybody's membership revision");
+  }
+
 }

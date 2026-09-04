@@ -17,6 +17,136 @@ info:
     changed at all.
   version: ${project.version}
 components:
+  schemas:
+    GroupWriteRequest:
+      type: object
+      description: A complete group name and description used for creation or replacement.
+      required:
+        - 'schema:name'
+        - 'schema:description'
+      properties:
+        'schema:name':
+          type: string
+        'schema:description':
+          type: string
+      additionalProperties: true
+    GroupPatchRequest:
+      type: object
+      description: A JSON merge patch for the mutable group properties.
+      minProperties: 1
+      properties:
+        'schema:name':
+          type: string
+          description: Renames the group; null is refused because a group must have a name.
+        'schema:description':
+          type: string
+          nullable: true
+          description: Null removes the description.
+      additionalProperties: true
+    GroupMemberUser:
+      type: object
+      required:
+        - '@id'
+      properties:
+        '@id':
+          type: string
+          format: uri
+        firstName:
+          type: string
+          readOnly: true
+        lastName:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+      additionalProperties: true
+    GroupMember:
+      type: object
+      required:
+        - user
+        - administrator
+        - member
+      properties:
+        user:
+          $ref: '#/components/schemas/GroupMemberUser'
+        administrator:
+          type: boolean
+        member:
+          type: boolean
+      additionalProperties: true
+    GroupMembership:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMember'
+      additionalProperties: false
+    Group:
+      type: object
+      required:
+        - '@id'
+        - resourceType
+        - 'schema:name'
+      properties:
+        '@id':
+          type: string
+          format: uri
+        resourceType:
+          type: string
+          enum: [group]
+        'schema:name':
+          type: string
+        'schema:description':
+          type: string
+          nullable: true
+        'schema:identifier':
+          type: string
+          nullable: true
+        'pav:createdOn':
+          type: string
+          format: date-time
+        'pav:lastUpdatedOn':
+          type: string
+          format: date-time
+        createdOnTS:
+          type: integer
+          format: int64
+        lastUpdatedOnTS:
+          type: integer
+          format: int64
+        specialGroup:
+          type: string
+          nullable: true
+        'pav:createdBy':
+          type: string
+          format: uri
+        'oslc:modifiedBy':
+          type: string
+          format: uri
+        sourceHash:
+          type: string
+          nullable: true
+        '@context':
+          type: object
+          readOnly: true
+          additionalProperties:
+            type: string
+      additionalProperties: false
+    GroupList:
+      type: object
+      required:
+        - groups
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
+      additionalProperties: false
   securitySchemes:
     api_key:
       type: apiKey

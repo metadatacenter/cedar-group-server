@@ -3,7 +3,7 @@
   "info" : {
     "description" : "Better Metadata - Better Science\n\nThe group server manages the groups CEDAR shares content with. A group is a name, a description,\na set of members, and a set of administrators; permissions elsewhere in CEDAR are granted to groups\nas well as to individual users.\n\nGroups and their memberships use strong ETags. Read the group, or its members, and send the ETag\nback in If-Match when changing or deleting it: a missing precondition returns 428 and a stale one\n412. Only an administrator of a group may change it, and the built-in special groups cannot be\nchanged at all.\n",
     "title" : "CEDAR Group Server API",
-    "version" : "2.9.6"
+    "version" : "2.9.7"
   },
   "paths" : {
     "/groups" : {
@@ -12,6 +12,13 @@
         "operationId" : "findGroups",
         "responses" : {
           "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GroupList"
+                }
+              }
+            },
             "description" : "Every group"
           },
           "401" : {
@@ -33,8 +40,26 @@
       "post" : {
         "description" : "Create a group from a name and a description. Names are unique, so a name already in use is refused rather than resolved.",
         "operationId" : "createGroup",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GroupWriteRequest"
+              }
+            }
+          },
+          "description" : "The new group's name and description",
+          "required" : true
+        },
         "responses" : {
           "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Group"
+                }
+              }
+            },
             "description" : "The group as created",
             "headers" : {
               "ETag" : {
@@ -143,6 +168,13 @@
         } ],
         "responses" : {
           "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Group"
+                }
+              }
+            },
             "description" : "The group",
             "headers" : {
               "ETag" : {
@@ -193,8 +225,26 @@
             "type" : "string"
           }
         } ],
+        "requestBody" : {
+          "content" : {
+            "application/merge-patch+json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GroupPatchRequest"
+              }
+            }
+          },
+          "description" : "The group properties to replace or remove",
+          "required" : true
+        },
         "responses" : {
           "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Group"
+                }
+              }
+            },
             "description" : "The group as patched",
             "headers" : {
               "ETag" : {
@@ -254,8 +304,26 @@
             "type" : "string"
           }
         } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GroupWriteRequest"
+              }
+            }
+          },
+          "description" : "The replacement name and description",
+          "required" : true
+        },
         "responses" : {
           "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Group"
+                }
+              }
+            },
             "description" : "The group as updated",
             "headers" : {
               "ETag" : {
@@ -311,6 +379,13 @@
         } ],
         "responses" : {
           "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GroupMembership"
+                }
+              }
+            },
             "description" : "The group's members and administrators",
             "headers" : {
               "ETag" : {
@@ -342,7 +417,7 @@
         "tags" : [ "Groups" ]
       },
       "put" : {
-        "description" : "Set who belongs to the group and who administers it. This replaces the membership rather than adding to it. Only an administrator of the group may change it. The group-update permission every user holds does not gate this on its own.",
+        "description" : "Set who belongs to the group and who administers it. This replaces the membership rather than adding to it. Only an administrator of the group may change it. The group-update permission every user holds does not gate this on its own. The built-in special groups cannot be changed.",
         "operationId" : "updateGroupMembers",
         "parameters" : [ {
           "description" : "The membership's current ETag, as returned by the members listing. A write without it is refused with 428, and a stale one with 412.",
@@ -361,12 +436,30 @@
             "type" : "string"
           }
         } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GroupMembership"
+              }
+            }
+          },
+          "description" : "The complete replacement membership",
+          "required" : true
+        },
         "responses" : {
           "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GroupMembership"
+                }
+              }
+            },
             "description" : "The membership as updated"
           },
           "400" : {
-            "description" : "The membership in the body is not well formed"
+            "description" : "The membership in the body is not well formed, or the group is a special group"
           },
           "401" : {
             "description" : "Unauthorized"
@@ -396,6 +489,170 @@
     }
   },
   "components" : {
+    "schemas" : {
+      "Group" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "@context" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "readOnly" : true
+          },
+          "@id" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "createdOnTS" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lastUpdatedOnTS" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "oslc:modifiedBy" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "pav:createdBy" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "pav:createdOn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "pav:lastUpdatedOn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "resourceType" : {
+            "type" : "string",
+            "enum" : [ "group" ]
+          },
+          "schema:description" : {
+            "type" : "string",
+            "nullable" : true
+          },
+          "schema:identifier" : {
+            "type" : "string",
+            "nullable" : true
+          },
+          "schema:name" : {
+            "type" : "string"
+          },
+          "sourceHash" : {
+            "type" : "string",
+            "nullable" : true
+          },
+          "specialGroup" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        },
+        "required" : [ "@id", "resourceType", "schema:name" ]
+      },
+      "GroupList" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "groups" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Group"
+            }
+          }
+        },
+        "required" : [ "groups" ]
+      },
+      "GroupMember" : {
+        "type" : "object",
+        "additionalProperties" : true,
+        "properties" : {
+          "administrator" : {
+            "type" : "boolean"
+          },
+          "member" : {
+            "type" : "boolean"
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/GroupMemberUser"
+          }
+        },
+        "required" : [ "administrator", "member", "user" ]
+      },
+      "GroupMemberUser" : {
+        "type" : "object",
+        "additionalProperties" : true,
+        "properties" : {
+          "@id" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "readOnly" : true
+          },
+          "firstName" : {
+            "type" : "string",
+            "readOnly" : true
+          },
+          "lastName" : {
+            "type" : "string",
+            "readOnly" : true
+          }
+        },
+        "required" : [ "@id" ]
+      },
+      "GroupMembership" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "properties" : {
+          "users" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/GroupMember"
+            }
+          }
+        },
+        "required" : [ "users" ]
+      },
+      "GroupPatchRequest" : {
+        "type" : "object",
+        "additionalProperties" : true,
+        "description" : "A JSON merge patch for the mutable group properties.",
+        "minProperties" : 1,
+        "properties" : {
+          "schema:description" : {
+            "type" : "string",
+            "description" : "Null removes the description.",
+            "nullable" : true
+          },
+          "schema:name" : {
+            "type" : "string",
+            "description" : "Renames the group; null is refused because a group must have a name."
+          }
+        }
+      },
+      "GroupWriteRequest" : {
+        "type" : "object",
+        "additionalProperties" : true,
+        "description" : "A complete group name and description used for creation or replacement.",
+        "properties" : {
+          "schema:description" : {
+            "type" : "string"
+          },
+          "schema:name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "schema:description", "schema:name" ]
+      }
+    },
     "securitySchemes" : {
       "api_key" : {
         "description" : "Your CEDAR API key, using the format 'apiKey <yourApiKey>'",
