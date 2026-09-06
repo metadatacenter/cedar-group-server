@@ -76,6 +76,7 @@ public class GroupMembershipAuthorizationMatrixTest {
   private static String groupPath;
   private static String groupUsersPath;
   private static String unchangedMembershipBody;
+  private static CedarUser plainMember;
 
   @BeforeAll
   public static void oneTimeSetUp() throws Exception {
@@ -93,6 +94,7 @@ public class GroupMembershipAuthorizationMatrixTest {
 
     CedarUser adminUser = TestAuthUtil.getAdminUser(cedarConfig);
     CedarUser user2 = TestAuthUtil.getTestUser2(cedarConfig);
+    plainMember = user2;
 
     // Group creation needs a system permission, so the admin creates it and administers it.
     HttpResponse<String> created = send("POST", "/groups",
@@ -162,6 +164,24 @@ public class GroupMembershipAuthorizationMatrixTest {
     Assertions.assertEquals(200, after.statusCode(), "the administrator should be able to read the membership");
     Assertions.assertEquals(2, countOccurrences(after.body(), "\"@id\""),
         "the membership should still hold exactly the administrator and the one member: " + after.body());
+  }
+
+  @Test
+  public void aMembershipReplacementMustKeepAnAdministrator() throws Exception {
+    CedarGroupUsersRequest withoutAdministrator = new CedarGroupUsersRequest();
+    withoutAdministrator.getUsers().add(
+        new CedarGroupUserRequest(new ResourcePermissionUser(plainMember.getId()), false, true));
+
+    HttpResponse<String> rejected = send("PUT", groupUsersPath,
+        JsonMapper.MAPPER.writeValueAsString(withoutAdministrator), actors.get(ADMIN), "*");
+
+    Assertions.assertEquals(400, rejected.statusCode(), rejected.body());
+    Assertions.assertTrue(rejected.body().contains("groupRequiresAdministrator"), rejected.body());
+
+    HttpResponse<String> after = send("GET", groupUsersPath, null, actors.get(ADMIN));
+    Assertions.assertEquals(200, after.statusCode());
+    Assertions.assertEquals(2, countOccurrences(after.body(), "\"@id\""),
+        "a rejected replacement must leave the membership unchanged: " + after.body());
   }
 
   private static int countOccurrences(String haystack, String needle) {
