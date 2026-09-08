@@ -181,6 +181,7 @@
         <configuration>
           <resourcePackages>
             <package>org.metadatacenter.cedar.group.resources</package>
+            <package>org.metadatacenter.cedar.util.dw</package>
           </resourcePackages>
         </configuration>
       </plugin>
