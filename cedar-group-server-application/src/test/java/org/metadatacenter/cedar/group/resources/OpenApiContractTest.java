@@ -20,7 +20,7 @@ class OpenApiContractTest {
     assertBody(spec, "/groups", "post", "application/json", "GroupWriteRequest");
     assertBody(spec, "/groups/{id}", "put", "application/json", "GroupWriteRequest");
     assertBody(spec, "/groups/{id}", "patch", "application/merge-patch+json", "GroupPatchRequest");
-    assertBody(spec, "/groups/{id}/users", "put", "application/json", "GroupMembership");
+    assertBody(spec, "/groups/{id}/users", "put", "application/json", "GroupMembershipRequest");
 
     assertResponse(spec, "/groups", "get", "200", "GroupList");
     assertResponse(spec, "/groups", "post", "201", "Group");
@@ -33,6 +33,15 @@ class OpenApiContractTest {
     assertTrue(spec.at("/components/schemas/GroupWriteRequest/required").toString().contains("schema:name"));
     assertTrue(spec.at("/components/schemas/GroupMembership/properties/users/items/$ref").asText()
         .endsWith("/GroupMember"));
+    assertTrue(spec.at("/components/schemas/GroupMembershipRequest/properties/users/items/$ref").asText()
+        .endsWith("/GroupMemberRequest"));
+    // A listing answers with the user's name and email beside the identifier; a write states the
+    // identifier alone, and the two schemas differ so that the write does not appear to set them.
+    assertTrue(spec.at("/components/schemas/GroupMember/properties/user/$ref").asText()
+        .endsWith("/CedarUserReference"));
+    assertTrue(spec.at("/components/schemas/GroupMemberRequest/properties/user/$ref").asText()
+        .endsWith("/CedarUserIdReference"));
+    assertFalse(spec.at("/components/schemas/CedarUserIdReference/properties").has("email"));
     JsonNode groupProperties = spec.at("/components/schemas/Group/properties");
     assertTrue(groupProperties.has("pav:createdOn"));
     assertTrue(groupProperties.has("pav:lastUpdatedOn"));

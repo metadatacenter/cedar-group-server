@@ -699,7 +699,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/GroupMembership"
+                "$ref" : "#/components/schemas/GroupMembershipRequest"
               }
             }
           },
@@ -894,6 +894,44 @@
         },
         "required" : [ "status", "statusCode" ]
       },
+      "CedarUserIdReference" : {
+        "type" : "object",
+        "additionalProperties" : true,
+        "description" : "A user named by identifier alone. A write uses it wherever a listing answers with a fuller user reference, because only the identifier decides which user is meant.",
+        "properties" : {
+          "@id" : {
+            "type" : "string",
+            "format" : "uri",
+            "description" : "Identifier of the user."
+          }
+        },
+        "required" : [ "@id" ]
+      },
+      "CedarUserReference" : {
+        "type" : "object",
+        "description" : "A reference to a user. It appears wherever a user is named beside something else, as the owner of a resource, the holder of a grant, or a member of a group. The name and email accompany the identifier so a caller need not fetch the user record to display them.",
+        "properties" : {
+          "@id" : {
+            "type" : "string",
+            "format" : "uri",
+            "description" : "Identifier of the user."
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "description" : "Email address of the user."
+          },
+          "firstName" : {
+            "type" : "string",
+            "description" : "Given name of the user."
+          },
+          "lastName" : {
+            "type" : "string",
+            "description" : "Family name of the user."
+          }
+        },
+        "required" : [ "@id" ]
+      },
       "Group" : {
         "type" : "object",
         "additionalProperties" : false,
@@ -975,51 +1013,66 @@
       "GroupMember" : {
         "type" : "object",
         "additionalProperties" : true,
+        "description" : "One user's place in a group. A member belongs to the group. An administrator may change who belongs to it. The two are recorded independently, so a user may administer a group without belonging to it.",
         "properties" : {
           "administrator" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "description" : "Whether the user may change who belongs to the group."
           },
           "member" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "description" : "Whether the user belongs to the group."
           },
           "user" : {
-            "$ref" : "#/components/schemas/GroupMemberUser"
+            "$ref" : "#/components/schemas/CedarUserReference"
           }
         },
         "required" : [ "administrator", "member", "user" ]
       },
-      "GroupMemberUser" : {
+      "GroupMemberRequest" : {
         "type" : "object",
         "additionalProperties" : true,
+        "description" : "One user's place in a group, as a write states it. The user is named by identifier alone. The two flags say what that user's standing should become.",
         "properties" : {
-          "@id" : {
-            "type" : "string",
-            "format" : "uri"
+          "administrator" : {
+            "type" : "boolean",
+            "description" : "Whether the user may change who belongs to the group."
           },
-          "email" : {
-            "type" : "string",
-            "format" : "email",
-            "readOnly" : true
+          "member" : {
+            "type" : "boolean",
+            "description" : "Whether the user belongs to the group."
           },
-          "firstName" : {
-            "type" : "string",
-            "readOnly" : true
-          },
-          "lastName" : {
-            "type" : "string",
-            "readOnly" : true
+          "user" : {
+            "$ref" : "#/components/schemas/CedarUserIdReference"
           }
         },
-        "required" : [ "@id" ]
+        "required" : [ "administrator", "member", "user" ]
       },
       "GroupMembership" : {
         "type" : "object",
         "additionalProperties" : false,
+        "description" : "Everyone a group names, its members and its administrators together. A membership is always given in full rather than a page at a time, and a write replaces it rather than adding to it.",
         "properties" : {
           "users" : {
             "type" : "array",
+            "description" : "One entry per user the group names.",
             "items" : {
               "$ref" : "#/components/schemas/GroupMember"
+            }
+          }
+        },
+        "required" : [ "users" ]
+      },
+      "GroupMembershipRequest" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "description" : "A replacement membership for a group. Each entry names a user by identifier alone, because the name and email a listing carries are read from the user record rather than set here.",
+        "properties" : {
+          "users" : {
+            "type" : "array",
+            "description" : "One entry per user the group should name once the write has been applied.",
+            "items" : {
+              "$ref" : "#/components/schemas/GroupMemberRequest"
             }
           }
         },

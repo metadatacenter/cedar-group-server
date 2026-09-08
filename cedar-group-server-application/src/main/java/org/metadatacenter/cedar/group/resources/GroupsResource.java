@@ -37,6 +37,7 @@ import org.metadatacenter.server.VersionedResource;
 import org.metadatacenter.server.neo4j.cypher.NodeProperty;
 import org.metadatacenter.server.result.BackendCallResult;
 import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
+import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
 import org.metadatacenter.util.http.CedarUrlUtil;
 import org.metadatacenter.util.http.CedarResponse;
@@ -433,7 +434,7 @@ public class GroupsResource extends AbstractGroupServerResource {
           + "what a membership update must supply, not the group's own.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The group's members and administrators",
-          content = @Content(schema = @Schema(ref = "#/components/schemas/GroupMembership")),
+          content = @Content(schema = @Schema(implementation = CedarGroupUsers.class)),
           headers = @Header(name = "ETag", description = "\"Strong validator for the membership's current revision.\"",
               schema = @Schema(type = "string"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
@@ -500,10 +501,10 @@ public class GroupsResource extends AbstractGroupServerResource {
           schema = @Schema(type = "string")))
   @RequestBody(description = "The complete replacement membership", required = true,
       content = @Content(mediaType = MediaType.APPLICATION_JSON,
-          schema = @Schema(ref = "#/components/schemas/GroupMembership")))
+          schema = @Schema(implementation = CedarGroupUsersRequest.class)))
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The membership as updated",
-          content = @Content(schema = @Schema(ref = "#/components/schemas/GroupMembership"))),
+          content = @Content(schema = @Schema(implementation = CedarGroupUsers.class))),
       @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The membership in the body is not well formed, or the group is a special group"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller does not administer this group"),
