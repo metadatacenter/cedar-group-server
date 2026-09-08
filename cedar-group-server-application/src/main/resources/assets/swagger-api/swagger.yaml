@@ -415,8 +415,10 @@ paths:
       - Groups
   /groups/{id}/users:
     get:
-      description: "Return the group's members and its administrators. The ETag is\
-        \ over the membership, so it is what a membership update must supply, not\
+      description: "Return the group's members and its administrators. Restricted\
+        \ to the group's own administrators, because each entry names a member and\
+        \ their email address; belonging to the group does not confer it. The ETag\
+        \ is over the membership, so it is what a membership update must supply, not\
         \ the group's own."
       operationId: getGroupMembers
       parameters:
@@ -450,7 +452,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CedarError"
-          description: The caller lacks the group read permission
+          description: The caller does not administer this group
         "404":
           content:
             application/json:

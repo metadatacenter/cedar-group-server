@@ -427,15 +427,17 @@ public class GroupsResource extends AbstractGroupServerResource {
   @Timed
   @Path("/{id}/users")
   @Operation(summary = "List a group's members",
-      description = "Return the group's members and its administrators. The ETag is over the "
-          + "membership, so it is what a membership update must supply, not the group's own.")
+      description = "Return the group's members and its administrators. Restricted to the group's "
+          + "own administrators, because each entry names a member and their email address; "
+          + "belonging to the group does not confer it. The ETag is over the membership, so it is "
+          + "what a membership update must supply, not the group's own.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The group's members and administrators",
           content = @Content(schema = @Schema(ref = "#/components/schemas/GroupMembership")),
           headers = @Header(name = "ETag", description = "\"Strong validator for the membership's current revision.\"",
               schema = @Schema(type = "string"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the group read permission"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller does not administer this group"),
       @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No such group"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
@@ -455,6 +457,22 @@ public class GroupsResource extends AbstractGroupServerResource {
         new CedarErrorPack()
             .message("The group can not be found by id!")
             .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
+    );
+
+    // Only an administrator of this group may read who is in it. GROUP_READ is held by every
+    // account, so it gates nothing on its own, and a roster names each member with their email
+    // address. Belonging to the group is deliberately not enough: every account belongs to the
+    // everybody group, so admitting members would leave the deployment's whole user directory
+    // readable by anyone with a login, which is the disclosure this check exists to close. The
+    // override is the same one the write handlers honour, held only by the built-in administrator;
+    // it is named for updating and is reused here so that one role continues to describe every
+    // group a deployment's operator may reach.
+    boolean isAdministrator = groupSession.userAdministersGroup(gid) || c.getCedarUser().has(UPDATE_NOT_ADMINISTERED_GROUP);
+    c.should(isAdministrator).be(True).otherwiseForbidden(
+        new CedarErrorPack()
+            .errorKey(GROUP_MEMBERS_CAN_BE_READ_ONLY_BY_GROUP_ADMIN)
+            .message("Only the administrators can read the group members!")
+            .operation(CedarOperations.list(FolderServerGroup.class, "id", id))
     );
 
     VersionedGroupUsers groupUsers = groupSession.findVersionedGroupUsers(gid);

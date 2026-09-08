@@ -137,13 +137,16 @@ public class GroupMembershipAuthorizationMatrixTest {
         .expect(OWNER, 403)        // neither member nor administrator
         .expect(ADMIN, 200);       // administers the group, and the body changes nothing
 
-    // Reads, and they are open: an account may read a group and its full membership whether or not it
-    // belongs to the group. The member below is served the roster, and so is a stranger —
-    // GroupsAuthorizationMatrixTest pins the same 200 for an account with no relationship to the
-    // group at all. Membership is therefore not what authorizes the read, which is why it cannot be
-    // what a fix keys on: the everybody group holds every account, so a rule admitting members would
-    // leave the deployment's whole directory readable by everyone. The intended answer is written
-    // out, disabled, in that class.
+    // Reads, and this is the row the class exists for. OTHER_USER is a member of this group and is
+    // still refused its roster: reading who else is in a group requires administering it, not
+    // belonging to it. That distinction is not fussiness. Every account belongs to the everybody
+    // group, so a rule admitting members would hand the deployment's entire user directory, email
+    // addresses included, to anyone with a login. A member being refused here is what proves the
+    // rule is the one that closes that, and GroupsAuthorizationMatrixTest asserts the everybody
+    // roster directly.
+    //
+    // The group's own record stays readable, so a member can still see the group they belong to and
+    // any account can choose it as the target of a share.
     //
     // Pinned to the single code rather than accepting "200 or 403". An expectation that accepts either
     // asserts almost nothing, and that is not hypothetical: the re-share row in
@@ -152,7 +155,7 @@ public class GroupMembershipAuthorizationMatrixTest {
     matrix.when("GET", groupUsersPath)
         .expect(ANONYMOUS, 401)
         .expect(ADMIN, 200)
-        .expect(OTHER_USER, 200);
+        .expect(OTHER_USER, 403);
 
     matrix.when("GET", groupPath)
         .expect(ANONYMOUS, 401)

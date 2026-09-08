@@ -6,7 +6,6 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.metadatacenter.cedar.group.GroupServerApplication;
 import org.metadatacenter.cedar.group.GroupServerConfiguration;
@@ -41,13 +40,13 @@ import static org.metadatacenter.util.test.PermissionMatrix.Actor.OWNER;
  * admits every logged-in caller. The second is the per-group check that the caller administers this
  * particular group, and it is what actually separates the actors below.
  *
- * <p>So group reads are open to any authenticated account and group writes are refused to everyone
- * but the group's own administrators. The table asserted the opposite until the fixture users were
- * built from the blueprint rather than from a hand-written list of three roles: they lacked
- * groupAdministrator, were refused everywhere, and the refusal was recorded here as the intended
- * design. Every cell an ordinary account occupies below is therefore load-bearing, and the write
- * cells are the stronger ones now — a 403 that once came from a permission the actor did not hold
- * now comes from the administrator check, which is the boundary worth guarding.
+ * <p>So a group's own record is readable by any authenticated account, while its roster and every
+ * write are refused to everyone but the group's own administrators. The table asserted a blanket
+ * refusal until the fixture users were built from the blueprint rather than from a hand-written list
+ * of three roles: they lacked groupAdministrator, were refused everywhere, and the refusal was
+ * recorded here as the intended design. Every cell an ordinary account occupies below is therefore
+ * load-bearing, and each 403 now comes from the administrator check rather than from a permission
+ * the actor never held, which is the boundary worth guarding.
  *
  * <p>The rows that mutate carry {@code If-Match} where the handler demands a precondition before it
  * considers authority, so a refusal is a refusal and not a 428 wearing its clothes. Creating a group
@@ -134,12 +133,11 @@ public class GroupsAuthorizationMatrixTest {
     String groupBody = "{\"schema:name\": \"Should Never Exist\", \"schema:description\": \"denied\"}";
     PermissionMatrix matrix = new PermissionMatrix("http://localhost:" + SERVER.getLocalPort(), actors);
 
-    // Reads. GROUP_READ is universal, and neither read handler asks anything else, so an account
-    // with no relationship to this group is served the group and its full membership exactly as its
-    // administrator is. Both ordinary actors are strangers to the fixture: OWNER created nothing
-    // here and OTHER_USER is not a member. That every stranger reads every roster is the disclosure
-    // recorded in groupRosterIsReadableByAnAccountWithNoRelationshipToTheGroup below; these cells
-    // state today's answer, and the two must be changed together.
+    // Reads split in two. GROUP_READ is universal, so it decides nothing; what a caller may read is
+    // decided by whether the answer names people. A group's own record does not, and stays open so
+    // it can be chosen as the target of a share. Its roster does, and is restricted to the group's
+    // administrators. Both ordinary actors are strangers to the fixture: OWNER created nothing here
+    // and OTHER_USER is not a member.
     matrix.when("GET", "/groups")
         .expect(ANONYMOUS, 401)
         .expect(OWNER, 200)
@@ -154,8 +152,8 @@ public class GroupsAuthorizationMatrixTest {
 
     matrix.when("GET", groupUsersPath)
         .expect(ANONYMOUS, 401)
-        .expect(OWNER, 200)
-        .expect(OTHER_USER, 200)
+        .expect(OWNER, 403)
+        .expect(OTHER_USER, 403)
         .expect(ADMIN, 200);
 
     // Creating carries only the anonymous cell here. An authenticated account is allowed to create,
@@ -225,7 +223,9 @@ public class GroupsAuthorizationMatrixTest {
     String etag = created.headers().firstValue("ETag").orElse(null);
     try {
       HttpResponse<String> members = send("GET", path + "/users", null, owner);
-      Assertions.assertEquals(200, members.statusCode(), members.body());
+      Assertions.assertEquals(200, members.statusCode(),
+          "the creator administers this group, so the roster restriction must not shut it out: "
+              + members.body());
       JsonNode record = JsonMapper.MAPPER.readTree(members.body()).get("users").get(0);
       Assertions.assertTrue(record.get("administrator").asBoolean(),
           "the creator must administer what it created, or no one could ever manage the group: "
@@ -244,29 +244,21 @@ public class GroupsAuthorizationMatrixTest {
   }
 
   /**
-   * Who may read a group's membership. Disabled because the server does not yet behave this way:
-   * every authenticated account can read every group's full roster, and each entry carries the
-   * member's identifier, first name, last name and email address. On a deployment whose group host
-   * is publicly proxied, two requests therefore return the complete user directory.
+   * Who may read a group's membership, and the two decisions that answer rests on.
    *
-   * <p>The assertions below are what closing that requires, and two of them are decisions worth
-   * naming rather than inferring.
+   * <p>The listing at {@code GET /groups} stays open. A group has to be visible to be chosen as the
+   * target of a share, so restricting the listing would break sharing with a group one does not
+   * belong to. Names are the lesser disclosure and the one the product needs.
    *
-   * <p>The first is that the listing at {@code GET /groups} stays open. A group has to be visible to
-   * be chosen as the target of a share, so restricting the listing would break sharing with a group
-   * one does not belong to. Names are the lesser disclosure and the one the product needs.
-   *
-   * <p>The second is that reading a roster requires administering that group, not belonging to it.
-   * Membership is not a sufficient test here, because the everybody group has every account in it:
-   * a rule phrased as "a member or an administrator may read" would leave the everybody roster —
-   * the whole directory, which is the disclosure that matters — readable by everyone, and close
-   * nothing. The everybody group is asserted separately below for that reason.
-   *
-   * <p>Enabling this test is the last step of that change, not a separate task.
+   * <p>Reading a roster requires administering that group, not belonging to it. Membership is not a
+   * sufficient test, because the everybody group has every account in it: a rule phrased as "a
+   * member or an administrator may read" would leave the everybody roster — the whole user
+   * directory, which is the disclosure that matters — readable by everyone, and would close
+   * nothing. The everybody group is asserted separately for that reason, and it is the case to
+   * preserve if this rule is ever revisited.
    */
   @Test
-  @Disabled("The group server discloses every roster to every account; enable with the fix that stops it")
-  public void groupRosterIsReadableByAnAccountWithNoRelationshipToTheGroup() throws Exception {
+  public void aGroupRosterIsReadableOnlyByAnAdministratorOfThatGroup() throws Exception {
     String stranger = actors.get(OTHER_USER);
 
     Assertions.assertEquals(200, send("GET", "/groups", null, stranger).statusCode(),
@@ -278,6 +270,10 @@ public class GroupsAuthorizationMatrixTest {
     Assertions.assertEquals(403, send("GET", everybodyUsersPath(), null, stranger).statusCode(),
         "the everybody roster is the deployment's user directory, so belonging to it cannot be what "
             + "authorizes reading it");
+
+    Assertions.assertEquals(200, send("GET", groupUsersPath, null, actors.get(ADMIN)).statusCode(),
+        "an administrator must still read the roster, or the refusals above would pass on an "
+            + "endpoint that is simply broken");
   }
 
   /** The everybody group's membership path, found by its marker rather than by its configurable name. */
