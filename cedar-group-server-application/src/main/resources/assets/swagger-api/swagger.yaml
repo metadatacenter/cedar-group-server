@@ -665,6 +665,7 @@ components:
           - groupAlreadyPresent
           - groupCanBeModifiedOnlyByGroupAdmin
           - groupCanBeDeletedOnlyByGroupAdmin
+          - groupMembersCanBeReadOnlyByGroupAdmin
           - groupRequiresAdministrator
           - groupUsersNotUpdated
           - specialGroupCanNotBeDeleted
