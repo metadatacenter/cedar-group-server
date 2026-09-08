@@ -123,10 +123,18 @@ public class GroupsResourceTest {
     Assertions.assertTrue(response.body().contains("Everybody"));
   }
 
+  /**
+   * GROUP_READ gates the listing, and every account holds it, so the gate narrows nothing. The
+   * listing being open is what lets a user pick a group to share with; what it also exposes is the
+   * subject of the disabled test in {@link GroupsAuthorizationMatrixTest}.
+   */
   @Test
-  public void groupListingRequiresGroupReadPermission() throws Exception {
+  public void groupListingIsOpenToEveryAuthenticatedAccount() throws Exception {
     HttpResponse<String> response = request("GET", "/groups", null, authHeaderUser1);
-    Assertions.assertEquals(403, response.statusCode());
+    Assertions.assertEquals(200, response.statusCode(), response.body());
+
+    HttpResponse<String> anonymous = request("GET", "/groups", null, null);
+    Assertions.assertEquals(401, anonymous.statusCode(), anonymous.body());
   }
 
   @Test
