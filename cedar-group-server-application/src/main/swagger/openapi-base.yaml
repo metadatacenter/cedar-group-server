@@ -43,49 +43,6 @@ components:
           nullable: true
           description: Null removes the description.
       additionalProperties: true
-    GroupMemberUser:
-      type: object
-      required:
-        - '@id'
-      properties:
-        '@id':
-          type: string
-          format: uri
-        firstName:
-          type: string
-          readOnly: true
-        lastName:
-          type: string
-          readOnly: true
-        email:
-          type: string
-          format: email
-          readOnly: true
-      additionalProperties: true
-    GroupMember:
-      type: object
-      required:
-        - user
-        - administrator
-        - member
-      properties:
-        user:
-          $ref: '#/components/schemas/GroupMemberUser'
-        administrator:
-          type: boolean
-        member:
-          type: boolean
-      additionalProperties: true
-    GroupMembership:
-      type: object
-      required:
-        - users
-      properties:
-        users:
-          type: array
-          items:
-            $ref: '#/components/schemas/GroupMember'
-      additionalProperties: false
     Group:
       type: object
       required:

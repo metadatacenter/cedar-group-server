@@ -37,12 +37,12 @@ import static org.metadatacenter.util.test.PermissionMatrix.Actor.OWNER;
  * Who may change a group's membership — asked of a member, not only of a stranger.
  *
  * <p>{@link GroupsAuthorizationMatrixTest} covers the stranger: someone with no relationship to the
- * group is refused. The untested actor is the plain member, and it is the one that matters, because
- * group membership is the widest lever in the sharing model. A grant to a group applies to whoever is
- * in it at the time of asking, so whoever can edit the membership can hand out access to every
- * resource ever shared with that group — without touching those resources' ACLs and without their
- * owners being involved. Whether that power stops at the administrators is therefore a security
- * boundary, and it was unasserted.
+ * group is refused every write. The untested actor is the plain member, and it is the one that
+ * matters, because group membership is the widest lever in the sharing model. A grant to a group
+ * applies to whoever is in it at the time of asking, so whoever can edit the membership can hand out
+ * access to every resource ever shared with that group — without touching those resources' ACLs and
+ * without their owners being involved. Whether that power stops at the administrators is therefore a
+ * security boundary, and it was unasserted.
  *
  * <p>The endpoint gates on {@code userAdministersGroup(gid) || <system permission>} and answers
  * Forbidden, so the expectation is that a member is refused exactly as a stranger is. The
@@ -137,10 +137,16 @@ public class GroupMembershipAuthorizationMatrixTest {
         .expect(OWNER, 403)        // neither member nor administrator
         .expect(ADMIN, 200);       // administers the group, and the body changes nothing
 
-    // Reads, and the answer is stricter than expected: membership confers no read access at all. A
-    // member is refused both the group and its membership list, exactly as the non-member OWNER is —
-    // GroupsAuthorizationMatrixTest pins the same 403 for a stranger. So a user can be in a group,
-    // reach resources through it, and be unable to see the group or discover who else is in it.
+    // Reads, and this is the row the class exists for. OTHER_USER is a member of this group and is
+    // still refused its roster: reading who else is in a group requires administering it, not
+    // belonging to it. That distinction is not fussiness. Every account belongs to the everybody
+    // group, so a rule admitting members would hand the deployment's entire user directory, email
+    // addresses included, to anyone with a login. A member being refused here is what proves the
+    // rule is the one that closes that, and GroupsAuthorizationMatrixTest asserts the everybody
+    // roster directly.
+    //
+    // The group's own record stays readable, so a member can still see the group they belong to and
+    // any account can choose it as the target of a share.
     //
     // Pinned to the single code rather than accepting "200 or 403". An expectation that accepts either
     // asserts almost nothing, and that is not hypothetical: the re-share row in
@@ -154,7 +160,7 @@ public class GroupMembershipAuthorizationMatrixTest {
     matrix.when("GET", groupPath)
         .expect(ANONYMOUS, 401)
         .expect(ADMIN, 200)
-        .expect(OTHER_USER, 403);
+        .expect(OTHER_USER, 200);
 
     matrix.verify();
 

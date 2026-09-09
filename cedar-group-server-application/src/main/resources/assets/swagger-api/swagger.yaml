@@ -12,8 +12,21 @@ info:
     412. Only an administrator of a group may change it, and the built-in special groups cannot be
     changed at all.
   title: CEDAR Group Server API
-  version: 2.9.9
+  version: 2.9.10
 paths:
+  /:
+    get:
+      operationId: showInfo
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: The service name and links to its API documentation
+      summary: Describe this CEDAR service
+      tags:
+      - Service
   /groups:
     get:
       description: Return every group in the system. Groups are visible to anyone
@@ -415,8 +428,10 @@ paths:
       - Groups
   /groups/{id}/users:
     get:
-      description: "Return the group's members and its administrators. The ETag is\
-        \ over the membership, so it is what a membership update must supply, not\
+      description: "Return the group's members and its administrators. Restricted\
+        \ to the group's own administrators, because each entry names a member and\
+        \ their email address; belonging to the group does not confer it. The ETag\
+        \ is over the membership, so it is what a membership update must supply, not\
         \ the group's own."
       operationId: getGroupMembers
       parameters:
@@ -450,7 +465,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CedarError"
-          description: The caller lacks the group read permission
+          description: The caller does not administer this group
         "404":
           content:
             application/json:
@@ -492,7 +507,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GroupMembership"
+              $ref: "#/components/schemas/GroupMembershipRequest"
         description: The complete replacement membership
         required: true
       responses:
@@ -550,6 +565,201 @@ paths:
       summary: Replace a group's members
       tags:
       - Groups
+  /healthcheck:
+    get:
+      operationId: healthCheck
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Every health check passed
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Forbidden
+        "500":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: At least one health check failed
+      security:
+      - api_key: []
+      summary: Run this service's health checks
+      tags:
+      - Service diagnostics
+  /insight/full:
+    get:
+      operationId: full
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: The requested JVM diagnostic report
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Forbidden
+      security:
+      - api_key: []
+      summary: Report all JVM diagnostics except per-thread stack traces
+      tags:
+      - Service diagnostics
+  /insight/gc:
+    get:
+      operationId: gc
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: The requested JVM diagnostic report
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Forbidden
+      security:
+      - api_key: []
+      summary: Report JVM garbage-collection counts
+      tags:
+      - Service diagnostics
+  /insight/memory:
+    get:
+      operationId: memory
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: The requested JVM diagnostic report
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Forbidden
+      security:
+      - api_key: []
+      summary: Report JVM memory use
+      tags:
+      - Service diagnostics
+  /insight/system:
+    get:
+      operationId: system
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: The requested JVM diagnostic report
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Forbidden
+      security:
+      - api_key: []
+      summary: Report operating-system information
+      tags:
+      - Service diagnostics
+  /insight/thread-details:
+    get:
+      operationId: threadDetails
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: The requested JVM diagnostic report
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Forbidden
+      security:
+      - api_key: []
+      summary: Report details and stack traces for every JVM thread
+      tags:
+      - Service diagnostics
+  /insight/threads:
+    get:
+      operationId: threads
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: The requested JVM diagnostic report
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Forbidden
+      security:
+      - api_key: []
+      summary: Report JVM thread counts
+      tags:
+      - Service diagnostics
 components:
   schemas:
     CedarError:
@@ -663,6 +873,7 @@ components:
           - groupAlreadyPresent
           - groupCanBeModifiedOnlyByGroupAdmin
           - groupCanBeDeletedOnlyByGroupAdmin
+          - groupMembersCanBeReadOnlyByGroupAdmin
           - groupRequiresAdministrator
           - groupUsersNotUpdated
           - specialGroupCanNotBeDeleted
@@ -739,11 +950,6 @@ components:
           description: Named structured values associated with the error.
         operation:
           type: object
-          additionalProperties:
-            type: object
-            description: Operation that failed. Its fields depend on the operation
-              type.
-            nullable: true
           description: Operation that failed. Its fields depend on the operation type.
           nullable: true
         parameters:
@@ -792,6 +998,42 @@ components:
       required:
       - status
       - statusCode
+    CedarUserIdReference:
+      type: object
+      additionalProperties: true
+      description: "A user named by identifier alone. A write uses it wherever a listing\
+        \ answers with a fuller user reference, because only the identifier decides\
+        \ which user is meant."
+      properties:
+        '@id':
+          type: string
+          format: uri
+          description: Identifier of the user.
+      required:
+      - '@id'
+    CedarUserReference:
+      type: object
+      description: "A reference to a user. It appears wherever a user is named beside\
+        \ something else, as the owner of a resource, the holder of a grant, or a\
+        \ member of a group. The name and email accompany the identifier so a caller\
+        \ need not fetch the user record to display them."
+      properties:
+        '@id':
+          type: string
+          format: uri
+          description: Identifier of the user.
+        email:
+          type: string
+          format: email
+          description: Email address of the user.
+        firstName:
+          type: string
+          description: Given name of the user.
+        lastName:
+          type: string
+          description: Family name of the user.
+      required:
+      - '@id'
     Group:
       type: object
       additionalProperties: false
@@ -857,44 +1099,68 @@ components:
     GroupMember:
       type: object
       additionalProperties: true
+      description: "One user's place in a group. A member belongs to the group. An\
+        \ administrator may change who belongs to it. The two are recorded independently,\
+        \ so a user may administer a group without belonging to it."
       properties:
         administrator:
           type: boolean
+          description: Whether the user may change who belongs to the group.
         member:
           type: boolean
+          description: Whether the user belongs to the group.
         user:
-          $ref: "#/components/schemas/GroupMemberUser"
+          $ref: "#/components/schemas/CedarUserReference"
       required:
       - administrator
       - member
       - user
-    GroupMemberUser:
+    GroupMemberRequest:
       type: object
       additionalProperties: true
+      description: "One user's place in a group, as a write states it. The user is\
+        \ named by identifier alone. The two flags say what that user's standing should\
+        \ become."
       properties:
-        '@id':
-          type: string
-          format: uri
-        email:
-          type: string
-          format: email
-          readOnly: true
-        firstName:
-          type: string
-          readOnly: true
-        lastName:
-          type: string
-          readOnly: true
+        administrator:
+          type: boolean
+          description: Whether the user may change who belongs to the group.
+        member:
+          type: boolean
+          description: Whether the user belongs to the group.
+        user:
+          $ref: "#/components/schemas/CedarUserIdReference"
       required:
-      - '@id'
+      - administrator
+      - member
+      - user
     GroupMembership:
       type: object
       additionalProperties: false
+      description: "Everyone a group names, its members and its administrators together.\
+        \ A membership is always given in full rather than a page at a time, and a\
+        \ write replaces it rather than adding to it."
       properties:
         users:
           type: array
+          description: One entry per user the group names.
           items:
             $ref: "#/components/schemas/GroupMember"
+      required:
+      - users
+    GroupMembershipRequest:
+      type: object
+      additionalProperties: false
+      description: "A replacement membership for a group. Each entry names a user\
+        \ by identifier alone, because the name and email a listing carries are read\
+        \ from the user record rather than set here."
+      properties:
+        users:
+          type: array
+          description: One entry per user the group should name once the write has
+            been applied.
+          items:
+            $ref: "#/components/schemas/GroupMemberRequest"
       required:
       - users
     GroupPatchRequest:
