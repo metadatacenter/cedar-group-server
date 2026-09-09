@@ -109,7 +109,7 @@ public class GroupsResourceTest {
     HttpResponse<String> created = request("POST", "/groups",
         "{\"schema:name\": \"" + name + "\", \"schema:description\": \"" + description + "\"}", authHeaderAdmin);
     Assertions.assertEquals(201, created.statusCode(), "fixture group was not created: " + created.body());
-    return JsonMapper.MAPPER.readTree(created.body()).get("@id").asText();
+    return JsonMapper.STRICT_MAPPER.readTree(created.body()).get("@id").asText();
   }
 
   private static String encode(String id) {
@@ -145,14 +145,14 @@ public class GroupsResourceTest {
         authHeaderAdmin);
     Assertions.assertEquals(201, created.statusCode());
     Assertions.assertEquals("\"1\"", created.headers().firstValue("ETag").orElse(null));
-    JsonNode group = JsonMapper.MAPPER.readTree(created.body());
+    JsonNode group = JsonMapper.STRICT_MAPPER.readTree(created.body());
     String groupId = group.get("@id").asText();
 
     // Read back
     HttpResponse<String> found = request("GET", "/groups/" + encode(groupId), null, authHeaderAdmin);
     Assertions.assertEquals(200, found.statusCode());
     Assertions.assertEquals("\"1\"", found.headers().firstValue("ETag").orElse(null));
-    Assertions.assertEquals("Test Group", JsonMapper.MAPPER.readTree(found.body()).get("schema:name").asText());
+    Assertions.assertEquals("Test Group", JsonMapper.STRICT_MAPPER.readTree(found.body()).get("schema:name").asText());
 
     // Update
     HttpResponse<String> missingPrecondition = request("PUT", "/groups/" + encode(groupId),
@@ -165,7 +165,7 @@ public class GroupsResourceTest {
         authHeaderAdmin, "application/json", "\"1\"");
     Assertions.assertEquals(200, updated.statusCode());
     Assertions.assertEquals("\"2\"", updated.headers().firstValue("ETag").orElse(null));
-    Assertions.assertEquals("Test Group Renamed", JsonMapper.MAPPER.readTree(updated.body()).get("schema:name").asText());
+    Assertions.assertEquals("Test Group Renamed", JsonMapper.STRICT_MAPPER.readTree(updated.body()).get("schema:name").asText());
 
     HttpResponse<String> staleUpdate = request("PUT", "/groups/" + encode(groupId),
         "{\"schema:name\": \"Stale Group Name\", \"schema:description\": \"stale\"}",
@@ -268,7 +268,7 @@ public class GroupsResourceTest {
 
     HttpResponse<String> after = request("GET", "/groups/" + encode(groupId), null, authHeaderAdmin);
     Assertions.assertEquals("Patch Null Name Group",
-        JsonMapper.MAPPER.readTree(after.body()).get("schema:name").asText(),
+        JsonMapper.STRICT_MAPPER.readTree(after.body()).get("schema:name").asText(),
         "the refused patch must have left the name alone");
   }
 
@@ -326,7 +326,7 @@ public class GroupsResourceTest {
     String membershipBefore = before.body();
     String membershipEtag = before.headers().firstValue("ETag").orElseThrow();
 
-    String adminId = JsonMapper.MAPPER.readTree(membershipBefore).get("users").get(0).get("user").get("@id").asText();
+    String adminId = JsonMapper.STRICT_MAPPER.readTree(membershipBefore).get("users").get(0).get("user").get("@id").asText();
     String unknownId = "https://metadatacenter.orgx/users/00000000-0000-0000-0000-000000000000";
     HttpResponse<String> updated = request("PUT", usersPath,
         "{\"users\": ["
@@ -365,7 +365,7 @@ public class GroupsResourceTest {
         "application/json", initialEtag);
     Assertions.assertEquals(412, stale.statusCode(), stale.body());
     Assertions.assertEquals("\"2\"",
-        JsonMapper.MAPPER.readTree(stale.body()).get("parameters").get("currentETag").asText());
+        JsonMapper.STRICT_MAPPER.readTree(stale.body()).get("parameters").get("currentETag").asText());
 
     HttpResponse<String> wildcard = request("PUT", usersPath, unchanged, authHeaderAdmin,
         "application/json", "*");
@@ -376,7 +376,7 @@ public class GroupsResourceTest {
   @Test
   public void everybodyGroupCanNotBeDeleted() throws Exception {
     HttpResponse<String> groups = request("GET", "/groups", null, authHeaderAdmin);
-    JsonNode groupList = JsonMapper.MAPPER.readTree(groups.body()).get("groups");
+    JsonNode groupList = JsonMapper.STRICT_MAPPER.readTree(groups.body()).get("groups");
     String everybodyId = null;
     for (JsonNode g : groupList) {
       if ("Everybody".equals(g.get("schema:name").asText())) {
@@ -392,7 +392,7 @@ public class GroupsResourceTest {
   @Test
   public void everybodyGroupMembershipCanNotBeReplaced() throws Exception {
     HttpResponse<String> groups = request("GET", "/groups", null, authHeaderAdmin);
-    JsonNode groupList = JsonMapper.MAPPER.readTree(groups.body()).get("groups");
+    JsonNode groupList = JsonMapper.STRICT_MAPPER.readTree(groups.body()).get("groups");
     String everybodyId = null;
     for (JsonNode group : groupList) {
       if ("Everybody".equals(group.get("schema:name").asText())) {

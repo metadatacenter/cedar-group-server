@@ -112,7 +112,7 @@ public class GroupMembershipAuthorizationMatrixTest {
     CedarGroupUsersRequest membership = new CedarGroupUsersRequest();
     membership.getUsers().add(new CedarGroupUserRequest(new ResourcePermissionUser(adminUser.getId()), true, true));
     membership.getUsers().add(new CedarGroupUserRequest(new ResourcePermissionUser(user2.getId()), false, true));
-    unchangedMembershipBody = JsonMapper.MAPPER.writeValueAsString(membership);
+    unchangedMembershipBody = JsonMapper.STRICT_MAPPER.writeValueAsString(membership);
 
     HttpResponse<String> seeded = send("PUT", groupUsersPath, unchangedMembershipBody, adminHeader, "*");
     Assertions.assertEquals(200, seeded.statusCode(),
@@ -179,7 +179,7 @@ public class GroupMembershipAuthorizationMatrixTest {
         new CedarGroupUserRequest(new ResourcePermissionUser(plainMember.getId()), false, true));
 
     HttpResponse<String> rejected = send("PUT", groupUsersPath,
-        JsonMapper.MAPPER.writeValueAsString(withoutAdministrator), actors.get(ADMIN), "*");
+        JsonMapper.STRICT_MAPPER.writeValueAsString(withoutAdministrator), actors.get(ADMIN), "*");
 
     Assertions.assertEquals(400, rejected.statusCode(), rejected.body());
     Assertions.assertTrue(rejected.body().contains("groupRequiresAdministrator"), rejected.body());

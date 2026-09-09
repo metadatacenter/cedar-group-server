@@ -109,7 +109,7 @@ public class GroupServerApplicationSmokeTest {
     HttpResponse<String> response = get("/groups", "Authorization", authHeaderAdmin);
 
     Assertions.assertEquals(503, response.statusCode(), response.body());
-    JsonNode error = JsonMapper.MAPPER.readTree(response.body());
+    JsonNode error = JsonMapper.STRICT_MAPPER.readTree(response.body());
     Assertions.assertEquals("SERVICE_UNAVAILABLE", error.path("status").asText(), response.body());
     Assertions.assertEquals("Neo4j is unavailable", error.path("message").asText(), response.body());
     Assertions.assertTrue(error.path("originalException").isMissingNode()
