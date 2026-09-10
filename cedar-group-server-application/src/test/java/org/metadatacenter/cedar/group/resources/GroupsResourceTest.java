@@ -12,6 +12,9 @@ import org.metadatacenter.cedar.group.GroupServerConfiguration;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
 import org.metadatacenter.model.SystemComponent;
+import org.metadatacenter.server.security.model.auth.CedarGroupUserRequest;
+import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
+import org.metadatacenter.server.security.model.permission.resource.ResourcePermissionUser;
 import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.util.test.EmbeddedCedarNeo4j;
 import org.metadatacenter.util.test.TestAuthUtil;
@@ -110,6 +113,18 @@ public class GroupsResourceTest {
         "{\"schema:name\": \"" + name + "\", \"schema:description\": \"" + description + "\"}", authHeaderAdmin);
     Assertions.assertEquals(201, created.statusCode(), "fixture group was not created: " + created.body());
     return JsonMapper.STRICT_MAPPER.readTree(created.body()).get("@id").asText();
+  }
+
+  /** The membership a listing reports, as the request that would establish it unchanged. */
+  private static String asMembershipRequest(String membershipListing) throws Exception {
+    CedarGroupUsersRequest request = new CedarGroupUsersRequest();
+    for (JsonNode member : JsonMapper.STRICT_MAPPER.readTree(membershipListing).get("users")) {
+      request.getUsers().add(new CedarGroupUserRequest(
+          new ResourcePermissionUser(member.get("user").get("@id").asText()),
+          member.get("administrator").asBoolean(),
+          member.get("member").asBoolean()));
+    }
+    return JsonMapper.STRICT_MAPPER.writeValueAsString(request);
   }
 
   private static String encode(String id) {
@@ -352,7 +367,12 @@ public class GroupsResourceTest {
     String initialEtag = initial.headers().firstValue("ETag").orElseThrow();
     Assertions.assertEquals("\"1\"", initialEtag);
 
-    String unchanged = initial.body();
+    // The membership as it stands, restated in the shape a write takes. The listing is wider than
+    // the request: a member comes back carrying the user's name and email, and goes in named by
+    // identifier alone. This test used to echo the response body back, and was answered only
+    // because the request type tolerated the extra properties. It no longer does, so a client that
+    // means "leave the membership as it is" has to say so in the request's own shape.
+    String unchanged = asMembershipRequest(initial.body());
     HttpResponse<String> missing = request("PUT", usersPath, unchanged, authHeaderAdmin);
     Assertions.assertEquals(428, missing.statusCode(), missing.body());
 
