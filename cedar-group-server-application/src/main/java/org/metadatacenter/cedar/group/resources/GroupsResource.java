@@ -243,7 +243,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     String ifMatch = c.getIfMatchHeader();
     if (ifMatch == null || ifMatch.isBlank()) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
-          .errorMessage("Updating a group requires the ETag returned by GET in If-Match")
+          .message("Updating a group requires the ETag returned by GET in If-Match")
           .build();
     }
     RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
@@ -286,13 +286,13 @@ public class GroupsResource extends AbstractGroupServerResource {
     } catch (RevisionConflictException e) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
-          .errorMessage("The group has been updated since it was read")
+          .message("The group has been updated since it was read")
           .build();
     }
 
     if (updatedGroup == null) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
-          .errorMessage("The group was deleted before the update could be applied")
+          .message("The group was deleted before the update could be applied")
           .build();
     }
 
@@ -333,7 +333,7 @@ public class GroupsResource extends AbstractGroupServerResource {
 
   private static Response groupUpdateTargetDeleted() {
     return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
-        .errorMessage("The group no longer exists, so the conditional update can not be applied")
+        .message("The group no longer exists, so the conditional update can not be applied")
         .build();
   }
 
@@ -387,7 +387,7 @@ public class GroupsResource extends AbstractGroupServerResource {
         (UPDATE_NOT_ADMINISTERED_GROUP);
     if (!isAdministrator && groupSession.findGroupById(gid) == null) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
-          .errorMessage("The group was deleted before this deletion could be applied")
+          .message("The group was deleted before this deletion could be applied")
           .build();
     }
     c.should(isAdministrator).be(True).otherwiseForbidden(
@@ -401,7 +401,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     String ifMatch = c.getIfMatchHeader();
     if (ifMatch == null || ifMatch.isBlank()) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
-          .errorMessage("Deleting a group requires the ETag returned by GET in If-Match")
+          .message("Deleting a group requires the ETag returned by GET in If-Match")
           .build();
     }
     boolean deleted;
@@ -410,12 +410,12 @@ public class GroupsResource extends AbstractGroupServerResource {
     } catch (RevisionConflictException e) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
-          .errorMessage("The group has been updated since it was read")
+          .message("The group has been updated since it was read")
           .build();
     }
     if (!deleted) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
-          .errorMessage("The group was deleted before this deletion could be applied")
+          .message("The group was deleted before this deletion could be applied")
           .build();
     }
 
@@ -546,7 +546,7 @@ public class GroupsResource extends AbstractGroupServerResource {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
           .id(id)
           .errorKey(GROUP_USERS_NOT_UPDATED)
-          .errorMessage("Replacing group membership requires the ETag returned by GET in If-Match")
+          .message("Replacing group membership requires the ETag returned by GET in If-Match")
           .build();
     }
     RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
@@ -561,7 +561,7 @@ public class GroupsResource extends AbstractGroupServerResource {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .id(id)
           .errorKey(GROUP_USERS_NOT_UPDATED)
-          .errorMessage("The group membership has been updated since it was read")
+          .message("The group membership has been updated since it was read")
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
           .build();
     }
@@ -620,7 +620,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     String ifMatch = c.getIfMatchHeader();
     if (ifMatch == null || ifMatch.isBlank()) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
-          .errorMessage("Updating a group requires the ETag returned by GET in If-Match")
+          .message("Updating a group requires the ETag returned by GET in If-Match")
           .build();
     }
     RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
@@ -673,7 +673,7 @@ public class GroupsResource extends AbstractGroupServerResource {
       if (!precondition.matches(snapshot.revision())) {
         return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
             .parameter("currentETag", RevisionPreconditionParser.format(snapshot.revision()))
-            .errorMessage("The group has been updated since it was read")
+            .message("The group has been updated since it was read")
             .build();
       }
       return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(snapshot.revision()))
@@ -700,7 +700,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     } catch (RevisionConflictException e) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
-          .errorMessage("The group has been updated since it was read")
+          .message("The group has been updated since it was read")
           .build();
     }
 
