@@ -131,7 +131,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_CREATE);
 
-    CedarRequestBody requestBody = c.request().getRequestBody();
+    CedarRequestBody requestBody = c.request().getRequestBody()
+        .mustHaveOnly("schema:name", "schema:description");
 
     CedarParameter groupName = requestBody.get("schema:name");
     CedarParameter groupDescription = requestBody.get("schema:description");
@@ -235,7 +236,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(GROUP_UPDATE);
 
-    CedarRequestBody requestBody = c.request().getRequestBody();
+    CedarRequestBody requestBody = c.request().getRequestBody()
+        .mustHaveOnly("schema:name", "schema:description");
 
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
@@ -612,7 +614,8 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     //c.must(c.request()).be(GenericAssertions.jsonBody);
     c.must(c.request()).be(JsonMergePatch);
-    CedarRequestBody requestBody = c.request().getRequestBody();
+    CedarRequestBody requestBody = c.request().getRequestBody()
+        .mustHaveOnly("schema:name", "schema:description");
 
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);

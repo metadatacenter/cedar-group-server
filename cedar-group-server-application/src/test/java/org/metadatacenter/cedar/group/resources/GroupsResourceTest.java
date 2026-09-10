@@ -288,6 +288,44 @@ public class GroupsResourceTest {
   }
 
   /**
+   * A group write accepts the name and the description, and refuses anything else. The Workspace
+   * used to PUT the whole group document it had read back — identifier, provenance, source hash and
+   * all — and the handler read the two properties it knew and dropped the rest in silence. A
+   * misspelled property was answered the same way: 200, with nothing changed.
+   */
+  @Test
+  public void aGroupWriteRefusesPropertiesItDoesNotAccept() throws Exception {
+    HttpResponse<String> created = request("POST", "/groups",
+        "{\"schema:name\": \"Closed Contract Group\", \"schema:description\": \"a group for the closed body test\","
+            + " \"specialGroup\": \"everybody\"}",
+        authHeaderAdmin, "application/json", null);
+    Assertions.assertEquals(400, created.statusCode(), "POST with an unsupported property: " + created.body());
+    Assertions.assertTrue(created.body().contains("specialGroup"), created.body());
+
+    String groupId = createGroup("Closed Contract Group", "a group for the closed body test");
+    String path = "/groups/" + encode(groupId);
+
+    HttpResponse<String> read = request("GET", path, null, authHeaderAdmin);
+    Assertions.assertEquals(200, read.statusCode(), read.body());
+    String etag = read.headers().firstValue("ETag").orElseThrow();
+
+    HttpResponse<String> echoed = request("PUT", path, read.body(), authHeaderAdmin,
+        "application/json", etag);
+    Assertions.assertEquals(400, echoed.statusCode(), "PUT of the response document: " + echoed.body());
+    Assertions.assertTrue(echoed.body().contains("@id"), echoed.body());
+
+    HttpResponse<String> misspelled = request("PATCH", path, "{\"schema:naem\": \"Renamed\"}",
+        authHeaderAdmin, "application/merge-patch+json", etag);
+    Assertions.assertEquals(400, misspelled.statusCode(), "PATCH with a misspelled property: " + misspelled.body());
+    Assertions.assertTrue(misspelled.body().contains("schema:naem"), misspelled.body());
+
+    HttpResponse<String> after = request("GET", path, null, authHeaderAdmin);
+    Assertions.assertEquals("Closed Contract Group",
+        JsonMapper.STRICT_MAPPER.readTree(after.body()).get("schema:name").asText(),
+        "a refused write must leave the group alone");
+  }
+
+  /**
    * A rename onto a sibling's name is the same collision {@link #duplicateGroupNameIsRejected} pins on
    * create, and it gets the same answer: 409 with the key, not the 400 the rename path used to give.
    * Asserted on both writing endpoints, which share the check.

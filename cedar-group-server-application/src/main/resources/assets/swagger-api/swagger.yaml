@@ -1162,7 +1162,7 @@ components:
       - users
     GroupPatchRequest:
       type: object
-      additionalProperties: true
+      additionalProperties: false
       description: A JSON merge patch for the mutable group properties.
       minProperties: 1
       properties:
@@ -1176,7 +1176,7 @@ components:
             a name.
     GroupWriteRequest:
       type: object
-      additionalProperties: true
+      additionalProperties: false
       description: A complete group name and description used for creation or replacement.
       properties:
         schema:description:
