@@ -12,7 +12,7 @@ info:
     412. Only an administrator of a group may change it, and the built-in special groups cannot be
     changed at all.
   title: CEDAR Group Server API
-  version: 2.9.10
+  version: 2.9.11
 paths:
   /:
     get:
@@ -764,7 +764,7 @@ components:
   schemas:
     CedarError:
       type: object
-      additionalProperties: true
+      additionalProperties: false
       description: A CEDAR error response. Diagnostic fields are populated only when
         they are relevant to the failure.
       properties:
@@ -908,12 +908,9 @@ components:
           - doiCanNotBeSet
           - doiAlreadyExists
           - dataCiteDOIDisabled
+          - pinnedVersionUnavailable
           - resourceNotFound
           - internalError
-          nullable: true
-        errorMessage:
-          type: string
-          description: Alias of message retained for compatibility.
           nullable: true
         errorReasonKey:
           type: string
@@ -1165,7 +1162,7 @@ components:
       - users
     GroupPatchRequest:
       type: object
-      additionalProperties: true
+      additionalProperties: false
       description: A JSON merge patch for the mutable group properties.
       minProperties: 1
       properties:
@@ -1179,7 +1176,7 @@ components:
             a name.
     GroupWriteRequest:
       type: object
-      additionalProperties: true
+      additionalProperties: false
       description: A complete group name and description used for creation or replacement.
       properties:
         schema:description:

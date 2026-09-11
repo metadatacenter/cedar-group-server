@@ -218,7 +218,7 @@ public class GroupsAuthorizationMatrixTest {
     Assertions.assertEquals(201, created.statusCode(),
         "an ordinary account holds GROUP_CREATE and must be able to create a group: " + created.body());
 
-    String id = JsonMapper.MAPPER.readTree(created.body()).get("@id").asText();
+    String id = JsonMapper.STRICT_MAPPER.readTree(created.body()).get("@id").asText();
     String path = "/groups/" + URLEncoder.encode(id, StandardCharsets.UTF_8);
     String etag = created.headers().firstValue("ETag").orElse(null);
     try {
@@ -226,7 +226,7 @@ public class GroupsAuthorizationMatrixTest {
       Assertions.assertEquals(200, members.statusCode(),
           "the creator administers this group, so the roster restriction must not shut it out: "
               + members.body());
-      JsonNode record = JsonMapper.MAPPER.readTree(members.body()).get("users").get(0);
+      JsonNode record = JsonMapper.STRICT_MAPPER.readTree(members.body()).get("users").get(0);
       Assertions.assertTrue(record.get("administrator").asBoolean(),
           "the creator must administer what it created, or no one could ever manage the group: "
               + members.body());
@@ -280,7 +280,7 @@ public class GroupsAuthorizationMatrixTest {
   private static String everybodyUsersPath() throws Exception {
     HttpResponse<String> listed = send("GET", "/groups", null, actors.get(ADMIN));
     Assertions.assertEquals(200, listed.statusCode(), listed.body());
-    for (JsonNode group : JsonMapper.MAPPER.readTree(listed.body()).get("groups")) {
+    for (JsonNode group : JsonMapper.STRICT_MAPPER.readTree(listed.body()).get("groups")) {
       JsonNode marker = group.get("specialGroup");
       if (marker != null && "EVERYBODY".equals(marker.asText())) {
         return "/groups/" + URLEncoder.encode(group.get("@id").asText(), StandardCharsets.UTF_8) + "/users";

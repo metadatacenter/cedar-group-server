@@ -31,6 +31,12 @@ class OpenApiContractTest {
     assertResponse(spec, "/groups/{id}/users", "put", "200", "GroupMembership");
 
     assertTrue(spec.at("/components/schemas/GroupWriteRequest/required").toString().contains("schema:name"));
+    // A write body is a closed contract: the handler refuses a property it does not accept, so the
+    // schema states it rather than leaving a client to find out by being answered 400.
+    assertFalse(spec.at("/components/schemas/GroupWriteRequest/additionalProperties").asBoolean(true),
+        "GroupWriteRequest must be declared closed");
+    assertFalse(spec.at("/components/schemas/GroupPatchRequest/additionalProperties").asBoolean(true),
+        "GroupPatchRequest must be declared closed");
     assertTrue(spec.at("/components/schemas/GroupMembership/properties/users/items/$ref").asText()
         .endsWith("/GroupMember"));
     assertTrue(spec.at("/components/schemas/GroupMembershipRequest/properties/users/items/$ref").asText()
@@ -67,7 +73,7 @@ class OpenApiContractTest {
   private static JsonNode readSpec() throws IOException {
     try (InputStream input = OpenApiContractTest.class.getResourceAsStream("/assets/swagger-api/swagger.json")) {
       assertNotNull(input, "generated OpenAPI document");
-      return JsonMapper.MAPPER.readTree(input);
+      return JsonMapper.STRICT_MAPPER.readTree(input);
     }
   }
 }

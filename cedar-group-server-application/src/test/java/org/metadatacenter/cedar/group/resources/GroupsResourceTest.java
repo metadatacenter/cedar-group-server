@@ -12,6 +12,9 @@ import org.metadatacenter.cedar.group.GroupServerConfiguration;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
 import org.metadatacenter.model.SystemComponent;
+import org.metadatacenter.server.security.model.auth.CedarGroupUserRequest;
+import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
+import org.metadatacenter.server.security.model.permission.resource.ResourcePermissionUser;
 import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.util.test.EmbeddedCedarNeo4j;
 import org.metadatacenter.util.test.TestAuthUtil;
@@ -109,7 +112,19 @@ public class GroupsResourceTest {
     HttpResponse<String> created = request("POST", "/groups",
         "{\"schema:name\": \"" + name + "\", \"schema:description\": \"" + description + "\"}", authHeaderAdmin);
     Assertions.assertEquals(201, created.statusCode(), "fixture group was not created: " + created.body());
-    return JsonMapper.MAPPER.readTree(created.body()).get("@id").asText();
+    return JsonMapper.STRICT_MAPPER.readTree(created.body()).get("@id").asText();
+  }
+
+  /** The membership a listing reports, as the request that would establish it unchanged. */
+  private static String asMembershipRequest(String membershipListing) throws Exception {
+    CedarGroupUsersRequest request = new CedarGroupUsersRequest();
+    for (JsonNode member : JsonMapper.STRICT_MAPPER.readTree(membershipListing).get("users")) {
+      request.getUsers().add(new CedarGroupUserRequest(
+          new ResourcePermissionUser(member.get("user").get("@id").asText()),
+          member.get("administrator").asBoolean(),
+          member.get("member").asBoolean()));
+    }
+    return JsonMapper.STRICT_MAPPER.writeValueAsString(request);
   }
 
   private static String encode(String id) {
@@ -145,14 +160,14 @@ public class GroupsResourceTest {
         authHeaderAdmin);
     Assertions.assertEquals(201, created.statusCode());
     Assertions.assertEquals("\"1\"", created.headers().firstValue("ETag").orElse(null));
-    JsonNode group = JsonMapper.MAPPER.readTree(created.body());
+    JsonNode group = JsonMapper.STRICT_MAPPER.readTree(created.body());
     String groupId = group.get("@id").asText();
 
     // Read back
     HttpResponse<String> found = request("GET", "/groups/" + encode(groupId), null, authHeaderAdmin);
     Assertions.assertEquals(200, found.statusCode());
     Assertions.assertEquals("\"1\"", found.headers().firstValue("ETag").orElse(null));
-    Assertions.assertEquals("Test Group", JsonMapper.MAPPER.readTree(found.body()).get("schema:name").asText());
+    Assertions.assertEquals("Test Group", JsonMapper.STRICT_MAPPER.readTree(found.body()).get("schema:name").asText());
 
     // Update
     HttpResponse<String> missingPrecondition = request("PUT", "/groups/" + encode(groupId),
@@ -165,7 +180,7 @@ public class GroupsResourceTest {
         authHeaderAdmin, "application/json", "\"1\"");
     Assertions.assertEquals(200, updated.statusCode());
     Assertions.assertEquals("\"2\"", updated.headers().firstValue("ETag").orElse(null));
-    Assertions.assertEquals("Test Group Renamed", JsonMapper.MAPPER.readTree(updated.body()).get("schema:name").asText());
+    Assertions.assertEquals("Test Group Renamed", JsonMapper.STRICT_MAPPER.readTree(updated.body()).get("schema:name").asText());
 
     HttpResponse<String> staleUpdate = request("PUT", "/groups/" + encode(groupId),
         "{\"schema:name\": \"Stale Group Name\", \"schema:description\": \"stale\"}",
@@ -268,8 +283,46 @@ public class GroupsResourceTest {
 
     HttpResponse<String> after = request("GET", "/groups/" + encode(groupId), null, authHeaderAdmin);
     Assertions.assertEquals("Patch Null Name Group",
-        JsonMapper.MAPPER.readTree(after.body()).get("schema:name").asText(),
+        JsonMapper.STRICT_MAPPER.readTree(after.body()).get("schema:name").asText(),
         "the refused patch must have left the name alone");
+  }
+
+  /**
+   * A group write accepts the name and the description, and refuses anything else. The Workspace
+   * used to PUT the whole group document it had read back — identifier, provenance, source hash and
+   * all — and the handler read the two properties it knew and dropped the rest in silence. A
+   * misspelled property was answered the same way: 200, with nothing changed.
+   */
+  @Test
+  public void aGroupWriteRefusesPropertiesItDoesNotAccept() throws Exception {
+    HttpResponse<String> created = request("POST", "/groups",
+        "{\"schema:name\": \"Closed Contract Group\", \"schema:description\": \"a group for the closed body test\","
+            + " \"specialGroup\": \"everybody\"}",
+        authHeaderAdmin, "application/json", null);
+    Assertions.assertEquals(400, created.statusCode(), "POST with an unsupported property: " + created.body());
+    Assertions.assertTrue(created.body().contains("specialGroup"), created.body());
+
+    String groupId = createGroup("Closed Contract Group", "a group for the closed body test");
+    String path = "/groups/" + encode(groupId);
+
+    HttpResponse<String> read = request("GET", path, null, authHeaderAdmin);
+    Assertions.assertEquals(200, read.statusCode(), read.body());
+    String etag = read.headers().firstValue("ETag").orElseThrow();
+
+    HttpResponse<String> echoed = request("PUT", path, read.body(), authHeaderAdmin,
+        "application/json", etag);
+    Assertions.assertEquals(400, echoed.statusCode(), "PUT of the response document: " + echoed.body());
+    Assertions.assertTrue(echoed.body().contains("@id"), echoed.body());
+
+    HttpResponse<String> misspelled = request("PATCH", path, "{\"schema:naem\": \"Renamed\"}",
+        authHeaderAdmin, "application/merge-patch+json", etag);
+    Assertions.assertEquals(400, misspelled.statusCode(), "PATCH with a misspelled property: " + misspelled.body());
+    Assertions.assertTrue(misspelled.body().contains("schema:naem"), misspelled.body());
+
+    HttpResponse<String> after = request("GET", path, null, authHeaderAdmin);
+    Assertions.assertEquals("Closed Contract Group",
+        JsonMapper.STRICT_MAPPER.readTree(after.body()).get("schema:name").asText(),
+        "a refused write must leave the group alone");
   }
 
   /**
@@ -326,7 +379,7 @@ public class GroupsResourceTest {
     String membershipBefore = before.body();
     String membershipEtag = before.headers().firstValue("ETag").orElseThrow();
 
-    String adminId = JsonMapper.MAPPER.readTree(membershipBefore).get("users").get(0).get("user").get("@id").asText();
+    String adminId = JsonMapper.STRICT_MAPPER.readTree(membershipBefore).get("users").get(0).get("user").get("@id").asText();
     String unknownId = "https://metadatacenter.orgx/users/00000000-0000-0000-0000-000000000000";
     HttpResponse<String> updated = request("PUT", usersPath,
         "{\"users\": ["
@@ -352,7 +405,12 @@ public class GroupsResourceTest {
     String initialEtag = initial.headers().firstValue("ETag").orElseThrow();
     Assertions.assertEquals("\"1\"", initialEtag);
 
-    String unchanged = initial.body();
+    // The membership as it stands, restated in the shape a write takes. The listing is wider than
+    // the request: a member comes back carrying the user's name and email, and goes in named by
+    // identifier alone. This test used to echo the response body back, and was answered only
+    // because the request type tolerated the extra properties. It no longer does, so a client that
+    // means "leave the membership as it is" has to say so in the request's own shape.
+    String unchanged = asMembershipRequest(initial.body());
     HttpResponse<String> missing = request("PUT", usersPath, unchanged, authHeaderAdmin);
     Assertions.assertEquals(428, missing.statusCode(), missing.body());
 
@@ -365,7 +423,7 @@ public class GroupsResourceTest {
         "application/json", initialEtag);
     Assertions.assertEquals(412, stale.statusCode(), stale.body());
     Assertions.assertEquals("\"2\"",
-        JsonMapper.MAPPER.readTree(stale.body()).get("parameters").get("currentETag").asText());
+        JsonMapper.STRICT_MAPPER.readTree(stale.body()).get("parameters").get("currentETag").asText());
 
     HttpResponse<String> wildcard = request("PUT", usersPath, unchanged, authHeaderAdmin,
         "application/json", "*");
@@ -376,7 +434,7 @@ public class GroupsResourceTest {
   @Test
   public void everybodyGroupCanNotBeDeleted() throws Exception {
     HttpResponse<String> groups = request("GET", "/groups", null, authHeaderAdmin);
-    JsonNode groupList = JsonMapper.MAPPER.readTree(groups.body()).get("groups");
+    JsonNode groupList = JsonMapper.STRICT_MAPPER.readTree(groups.body()).get("groups");
     String everybodyId = null;
     for (JsonNode g : groupList) {
       if ("Everybody".equals(g.get("schema:name").asText())) {
@@ -392,7 +450,7 @@ public class GroupsResourceTest {
   @Test
   public void everybodyGroupMembershipCanNotBeReplaced() throws Exception {
     HttpResponse<String> groups = request("GET", "/groups", null, authHeaderAdmin);
-    JsonNode groupList = JsonMapper.MAPPER.readTree(groups.body()).get("groups");
+    JsonNode groupList = JsonMapper.STRICT_MAPPER.readTree(groups.body()).get("groups");
     String everybodyId = null;
     for (JsonNode group : groupList) {
       if ("Everybody".equals(group.get("schema:name").asText())) {

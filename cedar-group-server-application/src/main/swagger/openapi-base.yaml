@@ -29,7 +29,7 @@ components:
           type: string
         'schema:description':
           type: string
-      additionalProperties: true
+      additionalProperties: false
     GroupPatchRequest:
       type: object
       description: A JSON merge patch for the mutable group properties.
@@ -42,7 +42,7 @@ components:
           type: string
           nullable: true
           description: Null removes the description.
-      additionalProperties: true
+      additionalProperties: false
     Group:
       type: object
       required:
