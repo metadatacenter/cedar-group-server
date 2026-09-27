@@ -7,6 +7,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.RepeatedTest;
 import org.metadatacenter.cedar.group.GroupServerApplication;
 import org.metadatacenter.cedar.group.GroupServerConfiguration;
 import org.metadatacenter.config.CedarConfig;
@@ -212,7 +213,7 @@ public class GroupsResourceTest {
     }
   }
 
-  @Test
+  @RepeatedTest(5)
   public void concurrentGroupDeletesConvergeWithoutServerOrPermissionErrors() throws Exception {
     String groupId = createGroup("Concurrent Delete Group " + UUID.randomUUID(),
         "A sacrificial group for the repeated DELETE regression test");
