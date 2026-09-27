@@ -269,6 +269,26 @@ public class GroupsResourceTest {
     Assertions.assertTrue(second.body().contains("groupAlreadyPresent"));
   }
 
+  @Test
+  public void emptyPatchIsRejectedButNonemptyNoOpAndNullRemovalRemainValid() throws Exception {
+    String path = "/groups/" + encode(createGroup("Patch Content Group", "remove me"));
+    HttpResponse<String> before = request("GET", path, null, authHeaderAdmin);
+    String etag = before.headers().firstValue("ETag").orElseThrow();
+    for (String invalid : List.of("{}", "[]", "null", "42")) {
+      HttpResponse<String> rejected = request("PATCH", path, invalid, authHeaderAdmin,
+          "application/merge-patch+json", etag);
+      Assertions.assertEquals(400, rejected.statusCode(), rejected.body());
+    }
+    HttpResponse<String> noOp = request("PATCH", path, "{\"schema:name\": \"Patch Content Group\"}",
+        authHeaderAdmin, "application/merge-patch+json", etag);
+    Assertions.assertEquals(200, noOp.statusCode(), noOp.body());
+    Assertions.assertEquals(etag, noOp.headers().firstValue("ETag").orElseThrow());
+    HttpResponse<String> removed = request("PATCH", path, "{\"schema:description\": null}",
+        authHeaderAdmin, "application/merge-patch+json", etag);
+    Assertions.assertEquals(200, removed.statusCode(), removed.body());
+    Assertions.assertFalse(JsonMapper.STRICT_MAPPER.readTree(removed.body()).hasNonNull("schema:description"));
+  }
+
   /**
    * Merge-patch reads an explicit null as "remove this property". A group must always have a name, so
    * the request is refused — and refused as a bad request. It used to reach the update, where the null
