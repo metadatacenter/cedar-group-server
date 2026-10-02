@@ -617,6 +617,11 @@ public class GroupsResource extends AbstractGroupServerResource {
     CedarRequestBody requestBody = c.request().getRequestBody()
         .mustHaveOnly("schema:name", "schema:description");
 
+    if (requestBody.asJson() == null || !requestBody.asJson().isObject() || requestBody.asJson().isEmpty()) {
+      return CedarResponse.badRequest().message("A group merge patch must be an object with at least one property")
+          .build();
+    }
+
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
