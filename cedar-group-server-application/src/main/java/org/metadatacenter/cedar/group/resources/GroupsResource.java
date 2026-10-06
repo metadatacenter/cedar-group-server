@@ -242,18 +242,28 @@ public class GroupsResource extends AbstractGroupServerResource {
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
+    // Look the group up before asking for a precondition: a write to a group that does not exist was
+    // told to send If-Match, as if there were something to send it for. A conditional write to one is
+    // a write to a group that has since gone.
     String ifMatch = c.getIfMatchHeader();
-    if (ifMatch == null || ifMatch.isBlank()) {
-      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+    boolean conditional = !RevisionPreconditionParser.isAbsent(ifMatch);
+    FolderServerGroup existingGroup = groupSession.findGroupById(gid);
+    if (existingGroup == null) {
+      if (conditional) {
+        return groupUpdateTargetDeleted();
+      }
+      c.should(existingGroup).be(NonNull).otherwiseNotFound(
+          new CedarErrorPack()
+              .message("The group can not be found by id!")
+              .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
+      );
+    }
+    if (!conditional) {
+      return CedarResponse.preconditionRequired()
           .message("Updating a group requires the ETag returned by GET in If-Match")
           .build();
     }
     RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
-
-    FolderServerGroup existingGroup = groupSession.findGroupById(gid);
-    if (existingGroup == null) {
-      return groupUpdateTargetDeleted();
-    }
     requireNonSpecialGroup(existingGroup, gid);
 
     // Only an administrator of this group may rename it. GROUP_UPDATE is held by every user, so it
@@ -401,8 +411,8 @@ public class GroupsResource extends AbstractGroupServerResource {
 
 
     String ifMatch = c.getIfMatchHeader();
-    if (ifMatch == null || ifMatch.isBlank()) {
-      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+    if (RevisionPreconditionParser.isAbsent(ifMatch)) {
+      return CedarResponse.preconditionRequired()
           .message("Deleting a group requires the ETag returned by GET in If-Match")
           .build();
     }
@@ -544,8 +554,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     );
 
     String ifMatch = c.getIfMatchHeader();
-    if (ifMatch == null || ifMatch.isBlank()) {
-      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+    if (RevisionPreconditionParser.isAbsent(ifMatch)) {
+      return CedarResponse.preconditionRequired()
           .id(id)
           .errorKey(GROUP_USERS_NOT_UPDATED)
           .message("Replacing group membership requires the ETag returned by GET in If-Match")
@@ -625,18 +635,28 @@ public class GroupsResource extends AbstractGroupServerResource {
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     CedarGroupId gid = CedarGroupId.build(id);
 
+    // Look the group up before asking for a precondition: a write to a group that does not exist was
+    // told to send If-Match, as if there were something to send it for. A conditional write to one is
+    // a write to a group that has since gone.
     String ifMatch = c.getIfMatchHeader();
-    if (ifMatch == null || ifMatch.isBlank()) {
-      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+    boolean conditional = !RevisionPreconditionParser.isAbsent(ifMatch);
+    FolderServerGroup existingGroup = groupSession.findGroupById(gid);
+    if (existingGroup == null) {
+      if (conditional) {
+        return groupUpdateTargetDeleted();
+      }
+      c.should(existingGroup).be(NonNull).otherwiseNotFound(
+          new CedarErrorPack()
+              .message("The group can not be found by id!")
+              .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id))
+      );
+    }
+    if (!conditional) {
+      return CedarResponse.preconditionRequired()
           .message("Updating a group requires the ETag returned by GET in If-Match")
           .build();
     }
     RevisionPrecondition precondition = RevisionPreconditionParser.parse(ifMatch);
-
-    FolderServerGroup existingGroup = groupSession.findGroupById(gid);
-    if (existingGroup == null) {
-      return groupUpdateTargetDeleted();
-    }
     requireNonSpecialGroup(existingGroup, gid);
 
     // Only an administrator of this group may change it. As in updateGroup, GROUP_UPDATE alone gates
