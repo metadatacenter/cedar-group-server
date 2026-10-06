@@ -246,7 +246,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     // told to send If-Match, as if there were something to send it for. A conditional write to one is
     // a write to a group that has since gone.
     String ifMatch = c.getIfMatchHeader();
-    boolean conditional = ifMatch != null && !ifMatch.isBlank();
+    boolean conditional = !RevisionPreconditionParser.isAbsent(ifMatch);
     FolderServerGroup existingGroup = groupSession.findGroupById(gid);
     if (existingGroup == null) {
       if (conditional) {
@@ -259,7 +259,7 @@ public class GroupsResource extends AbstractGroupServerResource {
       );
     }
     if (!conditional) {
-      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+      return CedarResponse.preconditionRequired()
           .message("Updating a group requires the ETag returned by GET in If-Match")
           .build();
     }
@@ -411,8 +411,8 @@ public class GroupsResource extends AbstractGroupServerResource {
 
 
     String ifMatch = c.getIfMatchHeader();
-    if (ifMatch == null || ifMatch.isBlank()) {
-      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+    if (RevisionPreconditionParser.isAbsent(ifMatch)) {
+      return CedarResponse.preconditionRequired()
           .message("Deleting a group requires the ETag returned by GET in If-Match")
           .build();
     }
@@ -554,8 +554,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     );
 
     String ifMatch = c.getIfMatchHeader();
-    if (ifMatch == null || ifMatch.isBlank()) {
-      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+    if (RevisionPreconditionParser.isAbsent(ifMatch)) {
+      return CedarResponse.preconditionRequired()
           .id(id)
           .errorKey(GROUP_USERS_NOT_UPDATED)
           .message("Replacing group membership requires the ETag returned by GET in If-Match")
@@ -639,7 +639,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     // told to send If-Match, as if there were something to send it for. A conditional write to one is
     // a write to a group that has since gone.
     String ifMatch = c.getIfMatchHeader();
-    boolean conditional = ifMatch != null && !ifMatch.isBlank();
+    boolean conditional = !RevisionPreconditionParser.isAbsent(ifMatch);
     FolderServerGroup existingGroup = groupSession.findGroupById(gid);
     if (existingGroup == null) {
       if (conditional) {
@@ -652,7 +652,7 @@ public class GroupsResource extends AbstractGroupServerResource {
       );
     }
     if (!conditional) {
-      return CedarResponse.status(CedarResponseStatus.PRECONDITION_REQUIRED)
+      return CedarResponse.preconditionRequired()
           .message("Updating a group requires the ETag returned by GET in If-Match")
           .build();
     }
