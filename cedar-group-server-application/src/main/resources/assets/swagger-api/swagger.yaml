@@ -426,6 +426,61 @@ paths:
       summary: Rename a group
       tags:
       - Groups
+  /groups/{id}/membership/me:
+    get:
+      description: Return only the authenticated caller's member and administrator
+        relationships. A caller with neither relationship receives two false flags.
+        System permissions do not imply either relationship. No other user's information
+        is returned. This response is not a validator for group writes.
+      operationId: getCallerMembership
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupCallerMembership"
+          description: The caller's own relationships
+          headers:
+            Cache-Control:
+              description: "private, no-store"
+              schema:
+                type: string
+              style: simple
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the group read permission
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: No such group
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Internal server error
+      security:
+      - api_key: []
+      summary: Get the caller's group membership
+      tags:
+      - Groups
   /groups/{id}/users:
     get:
       description: "Return the group's members and its administrators. Restricted\
@@ -1070,6 +1125,22 @@ components:
       - '@id'
       - resourceType
       - schema:name
+    GroupCallerMembership:
+      type: object
+      additionalProperties: false
+      description: "The authenticated caller's actual relationships, independent of\
+        \ system permission overrides."
+      properties:
+        administrator:
+          type: boolean
+          description: Whether the caller has an administrator relationship to this
+            group.
+        member:
+          type: boolean
+          description: Whether the caller has a membership relationship to this group.
+      required:
+      - administrator
+      - member
     GroupList:
       type: object
       additionalProperties: false

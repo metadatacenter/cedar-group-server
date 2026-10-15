@@ -28,6 +28,13 @@ class OpenApiContractTest {
     assertResponse(spec, "/groups/{id}", "put", "200", "Group");
     assertResponse(spec, "/groups/{id}", "patch", "200", "Group");
     assertResponse(spec, "/groups/{id}/users", "get", "200", "GroupMembership");
+    assertResponse(spec, "/groups/{id}/membership/me", "get", "200", "GroupCallerMembership");
+    JsonNode caller = spec.at("/components/schemas/GroupCallerMembership");
+    assertEquals(2, caller.path("properties").size());
+    assertEquals(2, caller.path("required").size());
+    assertEquals("boolean", caller.at("/properties/member/type").asText());
+    assertEquals("boolean", caller.at("/properties/administrator/type").asText());
+    assertFalse(caller.path("additionalProperties").asBoolean(true));
     assertResponse(spec, "/groups/{id}/users", "put", "200", "GroupMembership");
 
     assertTrue(spec.at("/components/schemas/GroupWriteRequest/required").toString().contains("schema:name"));
