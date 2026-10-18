@@ -6,6 +6,7 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
@@ -28,6 +29,7 @@ import java.util.Map;
  * unauthenticated request through the CEDAR auth machinery. This catches configuration and
  * startup rot that a config-only test cannot see.
  */
+@Tag("integration")
 public class GroupServerApplicationSmokeTest {
 
   static {

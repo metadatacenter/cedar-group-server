@@ -5,6 +5,7 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.metadatacenter.cedar.group.GroupServerApplication;
 import org.metadatacenter.cedar.group.GroupServerConfiguration;
@@ -55,6 +56,7 @@ import static org.metadatacenter.util.test.PermissionMatrix.Actor.OWNER;
  * would be answered 400 before authority was considered, and every row would then pass while
  * asserting nothing about who may change a membership.
  */
+@Tag("integration")
 public class GroupMembershipAuthorizationMatrixTest {
 
   static {

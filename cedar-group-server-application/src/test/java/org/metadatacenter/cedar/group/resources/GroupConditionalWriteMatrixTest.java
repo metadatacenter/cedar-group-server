@@ -6,6 +6,7 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.metadatacenter.cedar.group.GroupServerApplication;
 import org.metadatacenter.cedar.group.GroupServerConfiguration;
@@ -47,6 +48,7 @@ import java.util.function.Function;
  * to change has gone, and a delete or a membership change with 404, as the artifact server answers a
  * delete.
  */
+@Tag("integration")
 public class GroupConditionalWriteMatrixTest {
 
   static {
