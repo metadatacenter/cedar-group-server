@@ -1,5 +1,7 @@
 package org.metadatacenter.cedar.group.resources;
 
+import java.util.Locale;
+
 import com.codahale.metrics.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -291,7 +293,7 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     Map<NodeProperty, String> updateFields = new HashMap<>();
     updateFields.put(NodeProperty.NAME, groupName.stringValue());
-    updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase());
+    updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase(Locale.ROOT));
     updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
     VersionedResource<FolderServerGroup> updatedGroup;
     try {
@@ -746,7 +748,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     Map<NodeProperty, String> updateFields = new HashMap<>();
     if (updateName) {
       updateFields.put(NodeProperty.NAME, groupName.stringValue());
-      updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase());
+      updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase(Locale.ROOT));
     }
     if (updateDescription) {
       updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
