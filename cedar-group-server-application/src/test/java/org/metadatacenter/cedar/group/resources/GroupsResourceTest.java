@@ -6,6 +6,7 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.RepeatedTest;
 import org.metadatacenter.cedar.group.GroupServerApplication;
@@ -41,6 +42,7 @@ import java.util.concurrent.TimeUnit;
  * the in-memory user service; the graph is seeded with the global objects and test users, so the
  * queries below run against the real Cypher layer.
  */
+@Tag("integration")
 public class GroupsResourceTest {
 
   static {

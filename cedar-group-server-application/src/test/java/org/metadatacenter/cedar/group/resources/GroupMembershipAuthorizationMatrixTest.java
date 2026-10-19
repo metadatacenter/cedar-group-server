@@ -5,6 +5,7 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.metadatacenter.cedar.group.GroupServerApplication;
 import org.metadatacenter.cedar.group.GroupServerConfiguration;
@@ -55,6 +56,7 @@ import static org.metadatacenter.util.test.PermissionMatrix.Actor.OWNER;
  * would be answered 400 before authority was considered, and every row would then pass while
  * asserting nothing about who may change a membership.
  */
+@Tag("integration")
 public class GroupMembershipAuthorizationMatrixTest {
 
   static {
@@ -77,6 +79,7 @@ public class GroupMembershipAuthorizationMatrixTest {
   private static String groupUsersPath;
   private static String unchangedMembershipBody;
   private static CedarUser plainMember;
+  private static CedarUser groupCreator;
 
   @BeforeAll
   public static void oneTimeSetUp() throws Exception {
@@ -95,6 +98,7 @@ public class GroupMembershipAuthorizationMatrixTest {
     CedarUser adminUser = TestAuthUtil.getAdminUser(cedarConfig);
     CedarUser user2 = TestAuthUtil.getTestUser2(cedarConfig);
     plainMember = user2;
+    groupCreator = TestAuthUtil.getTestUser1(cedarConfig);
 
     // Group creation needs a system permission, so the admin creates it and administers it.
     HttpResponse<String> created = send("POST", "/groups",
@@ -170,6 +174,65 @@ public class GroupMembershipAuthorizationMatrixTest {
     Assertions.assertEquals(200, after.statusCode(), "the administrator should be able to read the membership");
     Assertions.assertEquals(2, countOccurrences(after.body(), "\"@id\""),
         "the membership should still hold exactly the administrator and the one member: " + after.body());
+  }
+
+  @Test
+  public void callerMembershipIsPrivateFreshAndIndependentOfSystemPermissions() throws Exception {
+    String selfPath = groupPath + "/membership/me";
+    assertCallerMembership(selfPath, actors.get(OWNER), false, false);
+    assertCallerMembership(selfPath, actors.get(OTHER_USER), true, false);
+    assertCallerMembership(selfPath, actors.get(ADMIN), true, true);
+    Assertions.assertEquals(401, send("GET", selfPath, null, null).statusCode());
+    Assertions.assertEquals(404, send("GET", "/groups/" +
+        URLEncoder.encode("https://example.org/groups/missing", StandardCharsets.UTF_8) + "/membership/me",
+        null, actors.get(OWNER)).statusCode());
+
+    // The built-in administrator can manage this new group without belonging to it.
+    HttpResponse<String> created = send("POST", "/groups",
+        "{\"schema:name\":\"Caller membership lifecycle\",\"schema:description\":\"\"}", actors.get(OWNER));
+    Assertions.assertEquals(201, created.statusCode(), created.body());
+    String path = "/groups/" + URLEncoder.encode(
+        JsonMapper.STRICT_MAPPER.readTree(created.body()).get("@id").asText(), StandardCharsets.UTF_8);
+    try {
+      assertCallerMembership(path + "/membership/me", actors.get(ADMIN), false, false);
+      // Neither supplying someone else's ID nor reading one's own status unlocks their roster.
+      assertCallerMembership(path + "/membership/me?userId=" +
+          URLEncoder.encode(groupCreator.getId(), StandardCharsets.UTF_8), actors.get(OTHER_USER), false, false);
+      for (boolean[] flags : new boolean[][]{{true, false}, {false, true}, {true, false}, {false, false}}) {
+        CedarGroupUsersRequest membership = new CedarGroupUsersRequest();
+        membership.getUsers().add(new CedarGroupUserRequest(
+            new ResourcePermissionUser(groupCreator.getId()), true, true));
+        if (flags[0] || flags[1]) membership.getUsers().add(new CedarGroupUserRequest(
+            new ResourcePermissionUser(plainMember.getId()), flags[1], flags[0]));
+        HttpResponse<String> changed = send("PUT", path + "/users",
+            JsonMapper.STRICT_MAPPER.writeValueAsString(membership), actors.get(OWNER), "*");
+        Assertions.assertEquals(200, changed.statusCode(), changed.body());
+        assertCallerMembership(path + "/membership/me", actors.get(OTHER_USER), flags[0], flags[1]);
+        Assertions.assertEquals(flags[1] ? 200 : 403,
+            send("GET", path + "/users", null, actors.get(OTHER_USER)).statusCode());
+      }
+    } finally {
+      Assertions.assertEquals(204, send("DELETE", path, null, actors.get(OWNER), "*").statusCode());
+    }
+    Assertions.assertEquals(404, send("GET", path + "/membership/me", null, actors.get(OWNER)).statusCode());
+
+    var listing = JsonMapper.STRICT_MAPPER.readTree(send("GET", "/groups", null, actors.get(OWNER)).body());
+    var everyone = java.util.stream.StreamSupport.stream(listing.get("groups").spliterator(), false)
+        .filter(g -> "EVERYBODY".equals(g.path("specialGroup").asText())).findFirst().orElseThrow();
+    String everyonePath = "/groups/" + URLEncoder.encode(everyone.get("@id").asText(), StandardCharsets.UTF_8);
+    assertCallerMembership(everyonePath + "/membership/me", actors.get(OTHER_USER), true, false);
+    Assertions.assertEquals(403, send("GET", everyonePath + "/users", null, actors.get(OTHER_USER)).statusCode());
+  }
+
+  private static void assertCallerMembership(String path, String actor, boolean member, boolean administrator)
+      throws Exception {
+    HttpResponse<String> response = send("GET", path, null, actor);
+    Assertions.assertEquals(200, response.statusCode(), response.body());
+    // Exact payload equality proves that no IDs, names, email addresses, roster or count escape.
+    Assertions.assertEquals(JsonMapper.STRICT_MAPPER.valueToTree(Map.of(
+        "member", member, "administrator", administrator)), JsonMapper.STRICT_MAPPER.readTree(response.body()));
+    Assertions.assertEquals("private, no-store", response.headers().firstValue("Cache-Control").orElseThrow());
+    Assertions.assertTrue(response.headers().firstValue("ETag").isEmpty());
   }
 
   @Test

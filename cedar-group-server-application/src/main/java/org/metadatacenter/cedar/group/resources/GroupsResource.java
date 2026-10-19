@@ -1,5 +1,7 @@
 package org.metadatacenter.cedar.group.resources;
 
+import java.util.Locale;
+
 import com.codahale.metrics.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,6 +32,7 @@ import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.GroupServiceSession;
+import org.metadatacenter.server.GroupCallerMembership;
 import org.metadatacenter.server.RevisionConflictException;
 import org.metadatacenter.server.RevisionPrecondition;
 import org.metadatacenter.server.VersionedGroupUsers;
@@ -290,7 +293,7 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     Map<NodeProperty, String> updateFields = new HashMap<>();
     updateFields.put(NodeProperty.NAME, groupName.stringValue());
-    updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase());
+    updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase(Locale.ROOT));
     updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());
     VersionedResource<FolderServerGroup> updatedGroup;
     try {
@@ -434,6 +437,34 @@ public class GroupsResource extends AbstractGroupServerResource {
     searchPermissionEnqueueService.groupDeleted(id);
 
     return Response.noContent().build();
+  }
+
+  @GET
+  @Timed
+  @Path("/{id}/membership/me")
+  @Operation(summary = "Get the caller's group membership",
+      description = "Return only the authenticated caller's member and administrator relationships. "
+          + "A caller with neither relationship receives two false flags. System permissions do not imply either relationship. "
+          + "No other user's information is returned. This response is not a validator for group writes.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "The caller's own relationships",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/GroupCallerMembership")),
+          headers = @Header(name = "Cache-Control", description = "private, no-store", schema = @Schema(type = "string"))),
+      @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(implementation = CedarError.class))),
+      @ApiResponse(responseCode = "403", description = "The caller lacks the group read permission", content = @Content(schema = @Schema(implementation = CedarError.class))),
+      @ApiResponse(responseCode = "404", description = "No such group", content = @Content(schema = @Schema(implementation = CedarError.class))),
+      @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = CedarError.class)))
+  })
+  public Response getCallerMembership(@PathParam(PP_ID) String id) throws CedarException {
+    CedarRequestContext c = buildRequestContext();
+    c.must(c.user()).be(LoggedIn);
+    c.must(c.user()).have(GROUP_READ);
+    GroupCallerMembership membership = dataServices.getGroupServiceSession(c)
+        .findCallerMembership(CedarGroupId.build(id));
+    c.should(membership).be(NonNull).otherwiseNotFound(
+        new CedarErrorPack().message("The group can not be found by id!")
+            .operation(CedarOperations.lookup(FolderServerGroup.class, "id", id)));
+    return Response.ok(membership).header(HttpHeaders.CACHE_CONTROL, "private, no-store").build();
   }
 
   @GET
@@ -717,7 +748,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     Map<NodeProperty, String> updateFields = new HashMap<>();
     if (updateName) {
       updateFields.put(NodeProperty.NAME, groupName.stringValue());
-      updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase());
+      updateFields.put(NodeProperty.NAME_LOWER, groupName.stringValue().toLowerCase(Locale.ROOT));
     }
     if (updateDescription) {
       updateFields.put(NodeProperty.DESCRIPTION, groupDescription.stringValue());

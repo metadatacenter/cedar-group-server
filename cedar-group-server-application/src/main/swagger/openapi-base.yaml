@@ -18,6 +18,18 @@ info:
   version: ${project.version}
 components:
   schemas:
+    GroupCallerMembership:
+      type: object
+      description: The authenticated caller's actual relationships, independent of system permission overrides.
+      required: [member, administrator]
+      properties:
+        member:
+          type: boolean
+          description: Whether the caller has a membership relationship to this group.
+        administrator:
+          type: boolean
+          description: Whether the caller has an administrator relationship to this group.
+      additionalProperties: false
     GroupWriteRequest:
       type: object
       description: A complete group name and description used for creation or replacement.

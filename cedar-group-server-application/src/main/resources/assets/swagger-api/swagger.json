@@ -3,7 +3,7 @@
   "info" : {
     "description" : "Better Metadata - Better Science\n\nThe group server manages the groups CEDAR shares content with. A group is a name, a description,\na set of members, and a set of administrators; permissions elsewhere in CEDAR are granted to groups\nas well as to individual users.\n\nGroups and their memberships use strong ETags. Read the group, or its members, and send the ETag\nback in If-Match when changing or deleting it: a missing precondition returns 428 and a stale one\n412. Only an administrator of a group may change it, and the built-in special groups cannot be\nchanged at all.\n",
     "title" : "CEDAR Group Server API",
-    "version" : "2.9.24"
+    "version" : "2.9.25"
   },
   "paths" : {
     "/" : {
@@ -611,6 +611,86 @@
           "api_key" : [ ]
         } ],
         "summary" : "Rename a group",
+        "tags" : [ "Groups" ]
+      }
+    },
+    "/groups/{id}/membership/me" : {
+      "get" : {
+        "description" : "Return only the authenticated caller's member and administrator relationships. A caller with neither relationship receives two false flags. System permissions do not imply either relationship. No other user's information is returned. This response is not a validator for group writes.",
+        "operationId" : "getCallerMembership",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GroupCallerMembership"
+                }
+              }
+            },
+            "description" : "The caller's own relationships",
+            "headers" : {
+              "Cache-Control" : {
+                "description" : "private, no-store",
+                "schema" : {
+                  "type" : "string"
+                },
+                "style" : "simple"
+              }
+            }
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the group read permission"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "No such group"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Get the caller's group membership",
         "tags" : [ "Groups" ]
       }
     },
@@ -1309,6 +1389,22 @@
           }
         },
         "required" : [ "@id", "resourceType", "schema:name" ]
+      },
+      "GroupCallerMembership" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "description" : "The authenticated caller's actual relationships, independent of system permission overrides.",
+        "properties" : {
+          "administrator" : {
+            "type" : "boolean",
+            "description" : "Whether the caller has an administrator relationship to this group."
+          },
+          "member" : {
+            "type" : "boolean",
+            "description" : "Whether the caller has a membership relationship to this group."
+          }
+        },
+        "required" : [ "administrator", "member" ]
       },
       "GroupList" : {
         "type" : "object",

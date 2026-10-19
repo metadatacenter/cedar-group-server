@@ -6,6 +6,7 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.metadatacenter.cedar.group.GroupServerApplication;
 import org.metadatacenter.cedar.group.GroupServerConfiguration;
@@ -54,6 +55,7 @@ import static org.metadatacenter.util.test.PermissionMatrix.Actor.OWNER;
  * sit in a sweep whose safety rests on the probes changing nothing. It is asserted on its own below,
  * with the group it creates deleted afterwards.
  */
+@Tag("integration")
 public class GroupsAuthorizationMatrixTest {
 
   static {
