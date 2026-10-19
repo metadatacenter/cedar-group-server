@@ -44,22 +44,12 @@
 
     <dependency>
       <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-cache-operations-library</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.metadatacenter</groupId>
       <artifactId>cedar-search-operations-library</artifactId>
     </dependency>
 
     <dependency>
       <groupId>org.metadatacenter</groupId>
       <artifactId>cedar-workspace-operations-library</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-queue-operations-library</artifactId>
     </dependency>
 
     <dependency>
@@ -92,9 +82,10 @@
     </dependency>
 
     <!--
-      Direct declaration required: the server stack transitively pins JNA 4.2.1 (no arm64
-      slice), and only a direct dependency wins Maven's mediation for the test classpath. The
-      version must match the one cedar-test-support-library declares.
+      JNA reaches the test classpath through the embedded Neo4j in cedar-test-support-library, at
+      the version cedar-parent manages. The OpenSearch server jar also declares it at compile
+      scope, and a direct declaration's scope wins, so this test-scoped one keeps JNA off the
+      runtime classpath and out of the shaded jar.
     -->
     <dependency>
       <groupId>net.java.dev.jna</groupId>
