@@ -20,6 +20,9 @@
     <cedar.shade.main.class>org.metadatacenter.cedar.group.GroupServerApplication</cedar.shade.main.class>
     <!-- Line coverage measured on 2026-10-19: 93.6%. The build fails below this floor. -->
     <cedar.coverage.line.minimum>0.91</cedar.coverage.line.minimum>
+    <!-- Branch coverage measured on 2026-10-26: 78.6% locally and 79.6% in CI. The floor follows
+         the lower figure, and the build fails below it. -->
+    <cedar.coverage.branch.minimum>0.76</cedar.coverage.branch.minimum>
   </properties>
 
   <dependencies>
