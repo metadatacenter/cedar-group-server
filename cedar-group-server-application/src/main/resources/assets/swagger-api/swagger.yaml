@@ -1039,7 +1039,7 @@ components:
       - statusCode
     CedarUserIdReference:
       type: object
-      additionalProperties: true
+      additionalProperties: false
       description: "A user named by identifier alone. A write uses it wherever a listing\
         \ answers with a fuller user reference, because only the identifier decides\
         \ which user is meant."
@@ -1172,7 +1172,7 @@ components:
       - user
     GroupMemberRequest:
       type: object
-      additionalProperties: true
+      additionalProperties: false
       description: "One user's place in a group, as a write states it. The user is\
         \ named by identifier alone. The two flags say what that user's standing should\
         \ become."
