@@ -135,6 +135,8 @@ public class GroupsAuthorizationMatrixTest {
   @Test
   public void groupReadsAreOpenAndWritesAreRestrictedToAdministrators() throws Exception {
     String groupBody = "{\"schema:name\": \"Should Never Exist\", \"schema:description\": \"denied\"}";
+    HttpResponse<String> rosterBefore = send("GET", groupUsersPath, null, actors.get(ADMIN));
+    Assertions.assertEquals(200, rosterBefore.statusCode(), rosterBefore.body());
     PermissionMatrix matrix = new PermissionMatrix("http://localhost:" + SERVER.getLocalPort(), actors);
 
     // Reads split in two. GROUP_READ is universal, so it decides nothing; what a caller may read is
@@ -214,6 +216,11 @@ public class GroupsAuthorizationMatrixTest {
         "a request that should have been denied renamed the fixture group: " + survivor.body());
     Assertions.assertEquals("authorization matrix fixture", fixture.path("schema:description").asText(),
         "a request that should have been denied changed the fixture group: " + survivor.body());
+    // The refused membership replacement asked to empty the roster; the roster and its revision stand.
+    HttpResponse<String> rosterAfter = send("GET", groupUsersPath, null, actors.get(ADMIN));
+    Assertions.assertEquals(rosterBefore.body(), rosterAfter.body(), "a refused membership replacement altered the roster");
+    Assertions.assertEquals(rosterBefore.headers().firstValue("ETag"), rosterAfter.headers().firstValue("ETag"),
+        "a refused membership replacement advanced the roster's revision");
   }
 
   private static HttpResponse<String> sendPatch(String body, String authHeader) throws Exception {
