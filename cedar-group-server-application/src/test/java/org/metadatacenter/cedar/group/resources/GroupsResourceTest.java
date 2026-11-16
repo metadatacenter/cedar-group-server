@@ -489,6 +489,47 @@ public class GroupsResourceTest {
   }
 
   /**
+   * A merge patch that renames a group keeps the lowercased name in step, which the case-insensitive
+   * uniqueness check reads: after the rename, the new name in another case collides and the old one
+   * is free again.
+   */
+  @Test
+  public void aPatchRenameKeepsTheCaseInsensitiveNameInStep() throws Exception {
+    String suffix = UUID.randomUUID().toString();
+    String path = "/groups/" + encode(createGroup("Patch Rename Before " + suffix, "renamed by patch"));
+
+    HttpResponse<String> renamed = request("PATCH", path, "{\"schema:name\": \"Patch Rename After " + suffix + "\"}",
+        authHeaderAdmin, "application/merge-patch+json", "\"1\"");
+    Assertions.assertEquals(200, renamed.statusCode(), renamed.body());
+    Assertions.assertEquals("\"2\"", renamed.headers().firstValue("ETag").orElse(null));
+    Assertions.assertEquals("Patch Rename After " + suffix,
+        JsonMapper.STRICT_MAPPER.readTree(request("GET", path, null, authHeaderAdmin).body()).get("schema:name").asText());
+
+    HttpResponse<String> taken = request("POST", "/groups",
+        "{\"schema:name\": \"patch rename after " + suffix + "\", \"schema:description\": \"lowercased\"}",
+        authHeaderAdmin);
+    Assertions.assertEquals(409, taken.statusCode(), "the renamed group's name in another case: " + taken.body());
+    Assertions.assertTrue(taken.body().contains("groupAlreadyPresent"), taken.body());
+
+    createGroup("PATCH RENAME BEFORE " + suffix, "the old name, free again");
+  }
+
+  /** A patch that changes nothing still honours its precondition: a stale tag is refused, not answered 200. */
+  @Test
+  public void aNoOpPatchWithAStaleTagIsRefused() throws Exception {
+    String path = "/groups/" + encode(createGroup("Stale No-op Patch " + UUID.randomUUID(), "unchanged"));
+    HttpResponse<String> moved = request("PATCH", path, "{\"schema:description\": \"changed\"}",
+        authHeaderAdmin, "application/merge-patch+json", "\"1\"");
+    Assertions.assertEquals(200, moved.statusCode(), moved.body());
+
+    HttpResponse<String> stale = request("PATCH", path, "{\"schema:description\": \"changed\"}",
+        authHeaderAdmin, "application/merge-patch+json", "\"1\"");
+    Assertions.assertEquals(412, stale.statusCode(), stale.body());
+    Assertions.assertEquals("\"2\"",
+        JsonMapper.STRICT_MAPPER.readTree(stale.body()).path("parameters").path("currentETag").asText(), stale.body());
+  }
+
+  /**
    * A membership request naming a user the graph does not hold is refused whole. The relation queries
    * match on id and affect nothing when the node is absent, so the unknown user used to be dropped in
    * silence while the rest of the request was applied and the caller was answered 200.
