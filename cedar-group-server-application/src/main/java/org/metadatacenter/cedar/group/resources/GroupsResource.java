@@ -32,6 +32,7 @@ import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.GroupServiceSession;
+import org.metadatacenter.server.GroupAdministrationRefusedException;
 import org.metadatacenter.server.GroupCallerMembership;
 import org.metadatacenter.server.RevisionConflictException;
 import org.metadatacenter.server.RevisionPrecondition;
@@ -69,6 +70,8 @@ import static org.metadatacenter.server.security.model.auth.CedarPermission.*;
 @SecurityRequirement(name = "api_key")
 public class GroupsResource extends AbstractGroupServerResource {
 
+  private static final String UPDATE_REFUSED = "Only the administrators can update the group!";
+  private static final String DELETE_REFUSED = "Only the administrators can delete the group!";
 
   private static SearchPermissionEnqueueService searchPermissionEnqueueService;
 
@@ -279,7 +282,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
-            .message("Only the administrators can update the group!")
+            .message(UPDATE_REFUSED)
             .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
@@ -298,6 +301,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     VersionedResource<FolderServerGroup> updatedGroup;
     try {
       updatedGroup = groupSession.updateGroupById(gid, updateFields, precondition);
+    } catch (GroupAdministrationRefusedException e) {
+      return administrationRefused(id, GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN, UPDATE_REFUSED);
     } catch (RevisionConflictException e) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
@@ -344,6 +349,15 @@ public class GroupsResource extends AbstractGroupServerResource {
           .badRequest();
       throw new CedarBackendException(ar);
     }
+  }
+
+  /**
+   * The graph layer's refusal of a caller who may not administer the group. The handlers check the
+   * same thing first, so this answers only when that check and the write disagree, and it answers as
+   * the handlers' own check does rather than as a group that no longer exists.
+   */
+  private static Response administrationRefused(String id, CedarErrorKey errorKey, String message) {
+    return CedarResponse.forbidden().id(id).errorKey(errorKey).message(message).build();
   }
 
   private static Response groupUpdateTargetDeleted() {
@@ -408,7 +422,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_DELETED_ONLY_BY_GROUP_ADMIN)
-            .message("Only the administrators can delete the group!")
+            .message(DELETE_REFUSED)
             .operation(CedarOperations.delete(FolderServerGroup.class, "id", id))
     );
 
@@ -422,6 +436,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     boolean deleted;
     try {
       deleted = groupSession.deleteGroupById(gid, RevisionPreconditionParser.parse(ifMatch));
+    } catch (GroupAdministrationRefusedException e) {
+      return administrationRefused(id, GROUP_CAN_BY_DELETED_ONLY_BY_GROUP_ADMIN, DELETE_REFUSED);
     } catch (RevisionConflictException e) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
@@ -580,7 +596,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
-            .message("Only the administrators can update the group!")
+            .message(UPDATE_REFUSED)
             .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
@@ -699,7 +715,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
-            .message("Only the administrators can update the group!")
+            .message(UPDATE_REFUSED)
             .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
@@ -756,6 +772,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     VersionedResource<FolderServerGroup> updatedGroup;
     try {
       updatedGroup = groupSession.updateGroupById(gid, updateFields, precondition);
+    } catch (GroupAdministrationRefusedException e) {
+      return administrationRefused(id, GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN, UPDATE_REFUSED);
     } catch (RevisionConflictException e) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
