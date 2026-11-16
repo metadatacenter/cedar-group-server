@@ -12,6 +12,7 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.metadatacenter.cedar.group.GroupServerApplication;
 import org.metadatacenter.cedar.group.GroupServerConfiguration;
 import org.metadatacenter.config.CedarConfig;
+import org.metadatacenter.config.environment.CedarEnvironmentSource;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
 import org.metadatacenter.model.SystemComponent;
 import org.metadatacenter.server.security.model.auth.CedarGroupUserRequest;
@@ -20,6 +21,11 @@ import org.metadatacenter.server.security.model.permission.resource.ResourcePerm
 import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.util.test.EmbeddedCedarNeo4j;
 import org.metadatacenter.util.test.TestAuthUtil;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Values;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -132,6 +138,73 @@ public class GroupsResourceTest {
 
   private static String encode(String id) {
     return URLEncoder.encode(id, StandardCharsets.UTF_8);
+  }
+
+  /**
+   * The search-permission events the outbox holds for a group, pending or quarantined. A group's
+   * deletion and a change to its membership each append one, and the search worker re-projects who
+   * may find every resource shared with the group from it. Nothing drains the outbox in this suite,
+   * so a count taken before and after a request shows exactly what that request appended.
+   */
+  private static long searchPermissionEvents(String groupId, String eventType) {
+    String uri = "bolt://" + CedarEnvironmentSource.get("CEDAR_NEO4J_HOST") + ":"
+        + CedarEnvironmentSource.get("CEDAR_NEO4J_BOLT_PORT");
+    try (Driver driver = GraphDatabase.driver(uri, AuthTokens.none()); Session session = driver.session()) {
+      return session.run("MATCH (e) WHERE (e:CedarSearchPermissionOutbox OR e:CedarSearchPermissionOutboxDeadLetter)"
+              + " AND e.resourceId = $id AND e.eventType = $type RETURN count(e) AS n",
+          Values.parameters("id", groupId, "type", eventType)).single().get("n").asLong();
+    }
+  }
+
+  /**
+   * A membership change appends one GROUP_MEMBERS_UPDATED event, without which search would go on
+   * showing the group's shared resources to a removed member. A refused change appends none.
+   */
+  @Test
+  public void aMembershipChangeAppendsOneSearchPermissionEventAndARefusalNone() throws Exception {
+    String groupId = createGroup("Search Event Membership Group " + UUID.randomUUID(), "membership events");
+    String usersPath = "/groups/" + encode(groupId) + "/users";
+    HttpResponse<String> listing = request("GET", usersPath, null, authHeaderAdmin);
+    Assertions.assertEquals(200, listing.statusCode(), listing.body());
+    String etag = listing.headers().firstValue("ETag").orElseThrow();
+    String unchanged = asMembershipRequest(listing.body());
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_MEMBERS_UPDATED"));
+
+    HttpResponse<String> forbidden = request("PUT", usersPath, unchanged, authHeaderUser1, "application/json", etag);
+    Assertions.assertEquals(403, forbidden.statusCode(), forbidden.body());
+    HttpResponse<String> stale = request("PUT", usersPath, unchanged, authHeaderAdmin, "application/json", "\"9\"");
+    Assertions.assertEquals(412, stale.statusCode(), stale.body());
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_MEMBERS_UPDATED"),
+        "a refused membership change must append no search-permission event");
+
+    HttpResponse<String> changed = request("PUT", usersPath, unchanged, authHeaderAdmin, "application/json", etag);
+    Assertions.assertEquals(200, changed.statusCode(), changed.body());
+    Assertions.assertEquals(1, searchPermissionEvents(groupId, "GROUP_MEMBERS_UPDATED"),
+        "a membership change must append one search-permission event");
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_DELETED"));
+  }
+
+  /**
+   * A group's deletion appends one GROUP_DELETED event, without which search would keep the deleted
+   * group's grants indefinitely. A refused deletion appends none.
+   */
+  @Test
+  public void aGroupDeletionAppendsOneSearchPermissionEventAndARefusalNone() throws Exception {
+    String groupId = createGroup("Search Event Deletion Group " + UUID.randomUUID(), "deletion events");
+    String path = "/groups/" + encode(groupId);
+
+    HttpResponse<String> forbidden = request("DELETE", path, null, authHeaderUser1, "application/json", "\"1\"");
+    Assertions.assertEquals(403, forbidden.statusCode(), forbidden.body());
+    HttpResponse<String> stale = request("DELETE", path, null, authHeaderAdmin, "application/json", "\"9\"");
+    Assertions.assertEquals(412, stale.statusCode(), stale.body());
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_DELETED"),
+        "a refused deletion must append no search-permission event");
+
+    HttpResponse<String> deleted = request("DELETE", path, null, authHeaderAdmin, "application/json", "\"1\"");
+    Assertions.assertEquals(204, deleted.statusCode(), deleted.body());
+    Assertions.assertEquals(1, searchPermissionEvents(groupId, "GROUP_DELETED"),
+        "a group deletion must append one search-permission event");
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_MEMBERS_UPDATED"));
   }
 
   @Test
