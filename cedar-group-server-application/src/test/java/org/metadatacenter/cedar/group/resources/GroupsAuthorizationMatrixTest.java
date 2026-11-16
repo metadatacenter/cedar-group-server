@@ -12,6 +12,7 @@ import org.metadatacenter.cedar.group.GroupServerApplication;
 import org.metadatacenter.cedar.group.GroupServerConfiguration;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
+import org.metadatacenter.error.CedarErrorKey;
 import org.metadatacenter.model.SystemComponent;
 import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.util.test.EmbeddedCedarNeo4j;
@@ -24,6 +25,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 import static org.metadatacenter.util.test.PermissionMatrix.Actor.ADMIN;
@@ -190,14 +192,40 @@ public class GroupsAuthorizationMatrixTest {
 
     matrix.verify();
 
+    // A merge patch takes its own content type, which the matrix cannot send, so its rows are
+    // probed here. It carries If-Match for the same reason PUT does.
+    String patch = "{\"schema:name\": \"Patched By A Stranger\", \"schema:description\": \"patched\"}";
+    Assertions.assertEquals(401, sendPatch(patch, null).statusCode(), "an anonymous PATCH must be refused");
+    for (PermissionMatrix.Actor actor : List.of(OWNER, OTHER_USER)) {
+      HttpResponse<String> patched = sendPatch(patch, actors.get(actor));
+      Assertions.assertEquals(403, patched.statusCode(), actor + " PATCH: " + patched.body());
+      Assertions.assertEquals(CedarErrorKey.GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN.getValue(),
+          JsonMapper.STRICT_MAPPER.readTree(patched.body()).path("errorKey").asText(), actor + " PATCH: " + patched.body());
+    }
+
     // Statuses alone would not prove the denials had no effect, so check the fixture survived. This
     // runs in the same method rather than a second test because it is only meaningful after the
     // probes above, and JUnit does not guarantee method order.
     HttpResponse<String> survivor = send("GET", groupPath, null, actors.get(ADMIN));
     Assertions.assertEquals(200, survivor.statusCode(),
         "the fixture group should have survived the denied requests");
-    Assertions.assertTrue(survivor.body().contains("Matrix Fixture Group"),
-        "a request that should have been denied altered the fixture group: " + survivor.body());
+    JsonNode fixture = JsonMapper.STRICT_MAPPER.readTree(survivor.body());
+    Assertions.assertEquals("Matrix Fixture Group", fixture.path("schema:name").asText(),
+        "a request that should have been denied renamed the fixture group: " + survivor.body());
+    Assertions.assertEquals("authorization matrix fixture", fixture.path("schema:description").asText(),
+        "a request that should have been denied changed the fixture group: " + survivor.body());
+  }
+
+  private static HttpResponse<String> sendPatch(String body, String authHeader) throws Exception {
+    HttpRequest.Builder builder = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + groupPath))
+        .header("Content-Type", "application/merge-patch+json")
+        .header("If-Match", "*")
+        .method("PATCH", HttpRequest.BodyPublishers.ofString(body));
+    if (authHeader != null) {
+      builder.header("Authorization", authHeader);
+    }
+    return CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofString());
   }
 
   /**
