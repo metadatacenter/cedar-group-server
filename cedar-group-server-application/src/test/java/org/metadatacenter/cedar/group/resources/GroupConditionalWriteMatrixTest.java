@@ -136,6 +136,7 @@ public class GroupConditionalWriteMatrixTest {
         for (boolean exists : List.of(true, false)) {
           String id = createGroup();
           String current = tagOf(write.tagPath().apply(id));
+          HttpResponse<String> groupBefore = send("GET", "/groups/" + encode(id), null, "application/json", null);
           String body = write.body().of(id);
           if (!exists) {
             HttpResponse<String> deleted = send("DELETE", "/groups/" + encode(id), null, "application/json",
@@ -145,9 +146,20 @@ public class GroupConditionalWriteMatrixTest {
           HttpResponse<String> answer = send(write.method(), write.path().apply(id), body, write.contentType(),
               tag.value().apply(current));
           int expected = expected(write, tag, exists);
+          String cell = write.name() + " / " + tag.name() + " / " + (exists ? "exists" : "missing");
           if (answer.statusCode() != expected)
-            differences.add(write.name() + " / " + tag.name() + " / " + (exists ? "exists" : "missing") + ": "
-                + answer.statusCode() + " where " + expected);
+            differences.add(cell + ": " + answer.statusCode() + " where " + expected);
+          // A refusal must leave the group as it was: the same record and revision, and the same
+          // revision of what the write targeted, or no group at all once it was deleted.
+          if (expected >= 400) {
+            HttpResponse<String> groupAfter = send("GET", "/groups/" + encode(id), null, "application/json", null);
+            if (!exists && groupAfter.statusCode() != 404)
+              differences.add(cell + ": the refusal left the deleted group readable");
+            if (exists && (!groupBefore.body().equals(groupAfter.body())
+                || !groupBefore.headers().firstValue("ETag").equals(groupAfter.headers().firstValue("ETag"))
+                || !current.equals(tagOf(write.tagPath().apply(id)))))
+              differences.add(cell + ": the refusal changed the group");
+          }
         }
       }
     }
