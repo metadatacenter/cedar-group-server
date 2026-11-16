@@ -344,6 +344,34 @@ public class GroupsResourceTest {
     Assertions.assertTrue(second.body().contains("groupAlreadyPresent"));
   }
 
+  /**
+   * The create looks the name up and then creates the group, so two creates of one name can both pass
+   * the lookup. Production closes that race with a unique constraint on the lowercased name, which the
+   * embedded graph is seeded with as well, and the request that loses must be told the name is taken
+   * rather than that the server failed.
+   */
+  @RepeatedTest(3)
+  public void concurrentCreatesOfOneNameCreateOneGroupAndAnswerTheRestWithConflict() throws Exception {
+    String name = "Concurrent Create Group " + UUID.randomUUID();
+    String body = "{\"schema:name\": \"" + name + "\", \"schema:description\": \"raced\"}";
+    List<String> answers = new ArrayList<>();
+    List<Integer> statuses = concurrentDeleteStatuses(10, () -> {
+      HttpResponse<String> created = request("POST", "/groups", body, authHeaderAdmin);
+      synchronized (answers) {
+        answers.add(created.statusCode() + " " + created.body());
+      }
+      return created.statusCode();
+    });
+
+    Assertions.assertEquals(1, statuses.stream().filter(status -> status == 201).count(), answers::toString);
+    Assertions.assertTrue(statuses.stream().allMatch(status -> status == 201 || status == 409), answers::toString);
+    Assertions.assertTrue(answers.stream().filter(answer -> answer.startsWith("409"))
+        .allMatch(answer -> answer.contains("groupAlreadyPresent")), answers::toString);
+    long stored = JsonMapper.STRICT_MAPPER.readTree(request("GET", "/groups", null, authHeaderAdmin).body())
+        .get("groups").findValuesAsText("schema:name").stream().filter(name::equals).count();
+    Assertions.assertEquals(1, stored, "the race left more than one group of that name");
+  }
+
   @Test
   public void emptyPatchIsRejectedButNonemptyNoOpAndNullRemovalRemainValid() throws Exception {
     String path = "/groups/" + encode(createGroup("Patch Content Group", "remove me"));
