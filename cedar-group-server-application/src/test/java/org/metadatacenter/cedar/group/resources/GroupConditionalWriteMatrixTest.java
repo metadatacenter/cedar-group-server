@@ -55,7 +55,6 @@ public class GroupConditionalWriteMatrixTest {
     EmbeddedCedarNeo4j.startAndRedirectEnvironment(Map.of(
         "CEDAR_GROUP_HTTP_PORT", "0",
         "CEDAR_GROUP_ADMIN_PORT", "0",
-        "CEDAR_GROUP_STOP_PORT", "0",
         "CEDAR_REDIS_PERSISTENT_PORT", "1"));
   }
 
