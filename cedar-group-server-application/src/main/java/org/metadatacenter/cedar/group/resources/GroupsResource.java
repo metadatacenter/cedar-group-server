@@ -166,11 +166,7 @@ public class GroupsResource extends AbstractGroupServerResource {
       if (!isGroupNameConstraintViolation(e)) {
         throw e;
       }
-      throw new CedarBackendException(new CedarAssertionResult(
-          "There is a group with the same name present in the system. Group names must be unique!")
-          .parameter("schema:name", groupName.stringValue())
-          .errorKey(CedarErrorKey.GROUP_ALREADY_PRESENT)
-          .conflict());
+      throw groupNameTaken(groupName.stringValue());
     }
     c.should(newGroup).be(NonNull).otherwiseInternalServerError(
         new CedarErrorPack()
@@ -325,6 +321,13 @@ public class GroupsResource extends AbstractGroupServerResource {
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
           .message("The group has been updated since it was read")
           .build();
+    } catch (RuntimeException e) {
+      // As with a create, two renames to one name can both pass the lookup above, and the graph's
+      // unique constraint refuses the second write.
+      if (!isGroupNameConstraintViolation(e)) {
+        throw e;
+      }
+      throw groupNameTaken(groupName.stringValue());
     }
 
     if (updatedGroup == null) {
@@ -796,6 +799,13 @@ public class GroupsResource extends AbstractGroupServerResource {
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
           .message("The group has been updated since it was read")
           .build();
+    } catch (RuntimeException e) {
+      // As with a create, two renames to one name can both pass the lookup above, and the graph's
+      // unique constraint refuses the second write.
+      if (!isGroupNameConstraintViolation(e)) {
+        throw e;
+      }
+      throw groupNameTaken(groupName.stringValue());
     }
 
     if (updatedGroup == null) {
@@ -804,6 +814,15 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(updatedGroup.revision()))
         .entity(updatedGroup.resource()).build();
+  }
+
+  /** The refusal of a create or rename whose name the graph's unique constraint found already taken. */
+  private static CedarBackendException groupNameTaken(String name) {
+    return new CedarBackendException(new CedarAssertionResult(
+        "There is a group with the same name present in the system. Group names must be unique!")
+        .parameter("schema:name", name)
+        .errorKey(CedarErrorKey.GROUP_ALREADY_PRESENT)
+        .conflict());
   }
 
   /** Whether the graph refused a write because another group already holds the lowercased name. */

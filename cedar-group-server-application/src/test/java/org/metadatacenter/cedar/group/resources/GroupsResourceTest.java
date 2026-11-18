@@ -372,6 +372,45 @@ public class GroupsResourceTest {
     Assertions.assertEquals(1, stored, "the race left more than one group of that name");
   }
 
+  /**
+   * A rename looks the new name up and then writes it, so two renames to one name can both pass the
+   * lookup. The unique constraint on the lowercased name refuses the second write, and that caller must
+   * be told the name is taken, as a create is, rather than that the server failed.
+   */
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"PUT", "PATCH"})
+  public void concurrentRenamesToOneNameRenameOneGroupAndAnswerTheRestWithConflict(String method) throws Exception {
+    String name = "Concurrent Rename Group " + UUID.randomUUID();
+    int count = 8;
+    List<String> paths = new ArrayList<>();
+    List<String> etags = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      String path = "/groups/" + encode(createGroup("Rename Source " + UUID.randomUUID(), "renamed"));
+      paths.add(path);
+      etags.add(request("GET", path, null, authHeaderAdmin).headers().firstValue("ETag").orElseThrow());
+    }
+    String body = "{\"schema:name\": \"" + name + "\", \"schema:description\": \"raced\"}";
+    String contentType = method.equals("PATCH") ? "application/merge-patch+json" : "application/json";
+    java.util.concurrent.atomic.AtomicInteger next = new java.util.concurrent.atomic.AtomicInteger();
+    List<String> answers = new ArrayList<>();
+    List<Integer> statuses = concurrentDeleteStatuses(count, () -> {
+      int i = next.getAndIncrement();
+      HttpResponse<String> renamed = request(method, paths.get(i), body, authHeaderAdmin, contentType, etags.get(i));
+      synchronized (answers) {
+        answers.add(renamed.statusCode() + " " + renamed.body());
+      }
+      return renamed.statusCode();
+    });
+
+    Assertions.assertEquals(1, statuses.stream().filter(status -> status == 200).count(), answers::toString);
+    Assertions.assertTrue(statuses.stream().allMatch(status -> status == 200 || status == 409), answers::toString);
+    Assertions.assertTrue(answers.stream().filter(answer -> answer.startsWith("409"))
+        .allMatch(answer -> answer.contains("groupAlreadyPresent")), answers::toString);
+    long stored = JsonMapper.STRICT_MAPPER.readTree(request("GET", "/groups", null, authHeaderAdmin).body())
+        .get("groups").findValuesAsText("schema:name").stream().filter(name::equals).count();
+    Assertions.assertEquals(1, stored, "the race left more than one group of that name");
+  }
+
   @Test
   public void emptyPatchIsRejectedButNonemptyNoOpAndNullRemovalRemainValid() throws Exception {
     String path = "/groups/" + encode(createGroup("Patch Content Group", "remove me"));
