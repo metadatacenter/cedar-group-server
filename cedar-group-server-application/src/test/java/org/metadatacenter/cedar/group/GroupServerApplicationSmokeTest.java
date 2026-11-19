@@ -38,7 +38,6 @@ public class GroupServerApplicationSmokeTest {
     Map<String, String> environment = new HashMap<>(CedarEnvironmentSource.getAll());
     environment.put("CEDAR_GROUP_HTTP_PORT", "0");
     environment.put("CEDAR_GROUP_ADMIN_PORT", "0");
-    environment.put("CEDAR_GROUP_STOP_PORT", "0");
     environment.put("CEDAR_NEO4J_HOST", "127.0.0.1");
     environment.put("CEDAR_NEO4J_BOLT_PORT", "1");
     CedarEnvironmentSource.setOverride(environment);

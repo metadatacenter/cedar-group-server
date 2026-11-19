@@ -65,7 +65,6 @@ public class GroupMembershipAuthorizationMatrixTest {
     EmbeddedCedarNeo4j.startAndRedirectEnvironment(Map.of(
         "CEDAR_GROUP_HTTP_PORT", "0",
         "CEDAR_GROUP_ADMIN_PORT", "0",
-        "CEDAR_GROUP_STOP_PORT", "0",
         "CEDAR_REDIS_PERSISTENT_PORT", "1"));
   }
 
@@ -78,6 +77,7 @@ public class GroupMembershipAuthorizationMatrixTest {
   private static String groupPath;
   private static String groupUsersPath;
   private static String unchangedMembershipBody;
+  private static String changedMembershipBody;
   private static CedarUser plainMember;
   private static CedarUser groupCreator;
 
@@ -118,6 +118,14 @@ public class GroupMembershipAuthorizationMatrixTest {
     membership.getUsers().add(new CedarGroupUserRequest(new ResourcePermissionUser(user2.getId()), false, true));
     unchangedMembershipBody = JsonMapper.STRICT_MAPPER.writeValueAsString(membership);
 
+    // What a refused caller asks for: the member made an administrator and the stranger added. A
+    // refused request that landed anyway would show in the roster.
+    CedarGroupUsersRequest changed = new CedarGroupUsersRequest();
+    changed.getUsers().add(new CedarGroupUserRequest(new ResourcePermissionUser(adminUser.getId()), true, true));
+    changed.getUsers().add(new CedarGroupUserRequest(new ResourcePermissionUser(user2.getId()), true, true));
+    changed.getUsers().add(new CedarGroupUserRequest(new ResourcePermissionUser(groupCreator.getId()), false, true));
+    changedMembershipBody = JsonMapper.STRICT_MAPPER.writeValueAsString(changed);
+
     HttpResponse<String> seeded = send("PUT", groupUsersPath, unchangedMembershipBody, adminHeader, "*");
     Assertions.assertEquals(200, seeded.statusCode(),
         "the fixture membership was not established: " + seeded.body());
@@ -130,16 +138,18 @@ public class GroupMembershipAuthorizationMatrixTest {
 
   @Test
   public void onlyAnAdministratorMayChangeTheMembership() throws Exception {
+    HttpResponse<String> before = send("GET", groupUsersPath, null, actors.get(ADMIN));
+    Assertions.assertEquals(200, before.statusCode(), before.body());
     PermissionMatrix matrix = new PermissionMatrix("http://localhost:" + SERVER.getLocalPort(), actors);
 
     // The boundary. OTHER_USER is a member of this group, so this row is the one the existing matrix
-    // could not ask: being in the group must not carry the power to decide who else is.
-    matrix.when("PUT", groupUsersPath, unchangedMembershipBody)
+    // could not ask: being in the group must not carry the power to decide who else is. Each refused
+    // caller asks for a change, so a refusal that wrote it would show in the roster.
+    matrix.when("PUT", groupUsersPath, changedMembershipBody)
         .header("If-Match", "*")
         .expect(ANONYMOUS, 401)
         .expect(OTHER_USER, 403)   // a member, and refused
-        .expect(OWNER, 403)        // neither member nor administrator
-        .expect(ADMIN, 200);       // administers the group, and the body changes nothing
+        .expect(OWNER, 403);       // neither member nor administrator
 
     // Reads, and this is the row the class exists for. OTHER_USER is a member of this group and is
     // still refused its roster: reading who else is in a group requires administering it, not
@@ -168,12 +178,17 @@ public class GroupMembershipAuthorizationMatrixTest {
 
     matrix.verify();
 
-    // The refusals must have changed nothing: user 2 should still be a member, and no one else added.
-    // Read as the administrator, who is definitely allowed to look.
+    // The refusals must have changed nothing: the same roster at the same revision. Read as the
+    // administrator, who is definitely allowed to look.
     HttpResponse<String> after = send("GET", groupUsersPath, null, actors.get(ADMIN));
     Assertions.assertEquals(200, after.statusCode(), "the administrator should be able to read the membership");
-    Assertions.assertEquals(2, countOccurrences(after.body(), "\"@id\""),
-        "the membership should still hold exactly the administrator and the one member: " + after.body());
+    Assertions.assertEquals(before.body(), after.body(), "a refused membership change altered the roster");
+    Assertions.assertEquals(before.headers().firstValue("ETag"), after.headers().firstValue("ETag"),
+        "a refused membership change advanced the roster's revision");
+
+    // The administrator administers the group, so the same write is allowed; the body changes nothing.
+    HttpResponse<String> allowed = send("PUT", groupUsersPath, unchangedMembershipBody, actors.get(ADMIN), "*");
+    Assertions.assertEquals(200, allowed.statusCode(), allowed.body());
   }
 
   @Test
@@ -241,6 +256,7 @@ public class GroupMembershipAuthorizationMatrixTest {
     withoutAdministrator.getUsers().add(
         new CedarGroupUserRequest(new ResourcePermissionUser(plainMember.getId()), false, true));
 
+    HttpResponse<String> before = send("GET", groupUsersPath, null, actors.get(ADMIN));
     HttpResponse<String> rejected = send("PUT", groupUsersPath,
         JsonMapper.STRICT_MAPPER.writeValueAsString(withoutAdministrator), actors.get(ADMIN), "*");
 
@@ -249,18 +265,9 @@ public class GroupMembershipAuthorizationMatrixTest {
 
     HttpResponse<String> after = send("GET", groupUsersPath, null, actors.get(ADMIN));
     Assertions.assertEquals(200, after.statusCode());
-    Assertions.assertEquals(2, countOccurrences(after.body(), "\"@id\""),
-        "a rejected replacement must leave the membership unchanged: " + after.body());
-  }
-
-  private static int countOccurrences(String haystack, String needle) {
-    int count = 0;
-    int at = haystack.indexOf(needle);
-    while (at >= 0) {
-      count++;
-      at = haystack.indexOf(needle, at + needle.length());
-    }
-    return count;
+    Assertions.assertEquals(before.body(), after.body(), "a rejected replacement must leave the membership unchanged");
+    Assertions.assertEquals(before.headers().firstValue("ETag"), after.headers().firstValue("ETag"),
+        "a rejected replacement must not advance the membership's revision");
   }
 
   private static HttpResponse<String> send(String method, String path, String body, String authHeader)

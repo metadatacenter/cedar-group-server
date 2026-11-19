@@ -12,6 +12,7 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.metadatacenter.cedar.group.GroupServerApplication;
 import org.metadatacenter.cedar.group.GroupServerConfiguration;
 import org.metadatacenter.config.CedarConfig;
+import org.metadatacenter.config.environment.CedarEnvironmentSource;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
 import org.metadatacenter.model.SystemComponent;
 import org.metadatacenter.server.security.model.auth.CedarGroupUserRequest;
@@ -20,6 +21,11 @@ import org.metadatacenter.server.security.model.permission.resource.ResourcePerm
 import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.util.test.EmbeddedCedarNeo4j;
 import org.metadatacenter.util.test.TestAuthUtil;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Values;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -53,7 +59,6 @@ public class GroupsResourceTest {
     EmbeddedCedarNeo4j.startAndRedirectEnvironment(Map.of(
         "CEDAR_GROUP_HTTP_PORT", "0",
         "CEDAR_GROUP_ADMIN_PORT", "0",
-        "CEDAR_GROUP_STOP_PORT", "0",
         "CEDAR_REDIS_PERSISTENT_PORT", "1"));
   }
 
@@ -132,6 +137,73 @@ public class GroupsResourceTest {
 
   private static String encode(String id) {
     return URLEncoder.encode(id, StandardCharsets.UTF_8);
+  }
+
+  /**
+   * The search-permission events the outbox holds for a group, pending or quarantined. A group's
+   * deletion and a change to its membership each append one, and the search worker re-projects who
+   * may find every resource shared with the group from it. Nothing drains the outbox in this suite,
+   * so a count taken before and after a request shows exactly what that request appended.
+   */
+  private static long searchPermissionEvents(String groupId, String eventType) {
+    String uri = "bolt://" + CedarEnvironmentSource.get("CEDAR_NEO4J_HOST") + ":"
+        + CedarEnvironmentSource.get("CEDAR_NEO4J_BOLT_PORT");
+    try (Driver driver = GraphDatabase.driver(uri, AuthTokens.none()); Session session = driver.session()) {
+      return session.run("MATCH (e) WHERE (e:CedarSearchPermissionOutbox OR e:CedarSearchPermissionOutboxDeadLetter)"
+              + " AND e.resourceId = $id AND e.eventType = $type RETURN count(e) AS n",
+          Values.parameters("id", groupId, "type", eventType)).single().get("n").asLong();
+    }
+  }
+
+  /**
+   * A membership change appends one GROUP_MEMBERS_UPDATED event, without which search would go on
+   * showing the group's shared resources to a removed member. A refused change appends none.
+   */
+  @Test
+  public void aMembershipChangeAppendsOneSearchPermissionEventAndARefusalNone() throws Exception {
+    String groupId = createGroup("Search Event Membership Group " + UUID.randomUUID(), "membership events");
+    String usersPath = "/groups/" + encode(groupId) + "/users";
+    HttpResponse<String> listing = request("GET", usersPath, null, authHeaderAdmin);
+    Assertions.assertEquals(200, listing.statusCode(), listing.body());
+    String etag = listing.headers().firstValue("ETag").orElseThrow();
+    String unchanged = asMembershipRequest(listing.body());
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_MEMBERS_UPDATED"));
+
+    HttpResponse<String> forbidden = request("PUT", usersPath, unchanged, authHeaderUser1, "application/json", etag);
+    Assertions.assertEquals(403, forbidden.statusCode(), forbidden.body());
+    HttpResponse<String> stale = request("PUT", usersPath, unchanged, authHeaderAdmin, "application/json", "\"9\"");
+    Assertions.assertEquals(412, stale.statusCode(), stale.body());
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_MEMBERS_UPDATED"),
+        "a refused membership change must append no search-permission event");
+
+    HttpResponse<String> changed = request("PUT", usersPath, unchanged, authHeaderAdmin, "application/json", etag);
+    Assertions.assertEquals(200, changed.statusCode(), changed.body());
+    Assertions.assertEquals(1, searchPermissionEvents(groupId, "GROUP_MEMBERS_UPDATED"),
+        "a membership change must append one search-permission event");
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_DELETED"));
+  }
+
+  /**
+   * A group's deletion appends one GROUP_DELETED event, without which search would keep the deleted
+   * group's grants indefinitely. A refused deletion appends none.
+   */
+  @Test
+  public void aGroupDeletionAppendsOneSearchPermissionEventAndARefusalNone() throws Exception {
+    String groupId = createGroup("Search Event Deletion Group " + UUID.randomUUID(), "deletion events");
+    String path = "/groups/" + encode(groupId);
+
+    HttpResponse<String> forbidden = request("DELETE", path, null, authHeaderUser1, "application/json", "\"1\"");
+    Assertions.assertEquals(403, forbidden.statusCode(), forbidden.body());
+    HttpResponse<String> stale = request("DELETE", path, null, authHeaderAdmin, "application/json", "\"9\"");
+    Assertions.assertEquals(412, stale.statusCode(), stale.body());
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_DELETED"),
+        "a refused deletion must append no search-permission event");
+
+    HttpResponse<String> deleted = request("DELETE", path, null, authHeaderAdmin, "application/json", "\"1\"");
+    Assertions.assertEquals(204, deleted.statusCode(), deleted.body());
+    Assertions.assertEquals(1, searchPermissionEvents(groupId, "GROUP_DELETED"),
+        "a group deletion must append one search-permission event");
+    Assertions.assertEquals(0, searchPermissionEvents(groupId, "GROUP_MEMBERS_UPDATED"));
   }
 
   @Test
@@ -271,6 +343,73 @@ public class GroupsResourceTest {
     Assertions.assertTrue(second.body().contains("groupAlreadyPresent"));
   }
 
+  /**
+   * The create looks the name up and then creates the group, so two creates of one name can both pass
+   * the lookup. Production closes that race with a unique constraint on the lowercased name, which the
+   * embedded graph is seeded with as well, and the request that loses must be told the name is taken
+   * rather than that the server failed.
+   */
+  @RepeatedTest(3)
+  public void concurrentCreatesOfOneNameCreateOneGroupAndAnswerTheRestWithConflict() throws Exception {
+    String name = "Concurrent Create Group " + UUID.randomUUID();
+    String body = "{\"schema:name\": \"" + name + "\", \"schema:description\": \"raced\"}";
+    List<String> answers = new ArrayList<>();
+    List<Integer> statuses = concurrentDeleteStatuses(10, () -> {
+      HttpResponse<String> created = request("POST", "/groups", body, authHeaderAdmin);
+      synchronized (answers) {
+        answers.add(created.statusCode() + " " + created.body());
+      }
+      return created.statusCode();
+    });
+
+    Assertions.assertEquals(1, statuses.stream().filter(status -> status == 201).count(), answers::toString);
+    Assertions.assertTrue(statuses.stream().allMatch(status -> status == 201 || status == 409), answers::toString);
+    Assertions.assertTrue(answers.stream().filter(answer -> answer.startsWith("409"))
+        .allMatch(answer -> answer.contains("groupAlreadyPresent")), answers::toString);
+    long stored = JsonMapper.STRICT_MAPPER.readTree(request("GET", "/groups", null, authHeaderAdmin).body())
+        .get("groups").findValuesAsText("schema:name").stream().filter(name::equals).count();
+    Assertions.assertEquals(1, stored, "the race left more than one group of that name");
+  }
+
+  /**
+   * A rename looks the new name up and then writes it, so two renames to one name can both pass the
+   * lookup. The unique constraint on the lowercased name refuses the second write, and that caller must
+   * be told the name is taken, as a create is, rather than that the server failed.
+   */
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"PUT", "PATCH"})
+  public void concurrentRenamesToOneNameRenameOneGroupAndAnswerTheRestWithConflict(String method) throws Exception {
+    String name = "Concurrent Rename Group " + UUID.randomUUID();
+    int count = 8;
+    List<String> paths = new ArrayList<>();
+    List<String> etags = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      String path = "/groups/" + encode(createGroup("Rename Source " + UUID.randomUUID(), "renamed"));
+      paths.add(path);
+      etags.add(request("GET", path, null, authHeaderAdmin).headers().firstValue("ETag").orElseThrow());
+    }
+    String body = "{\"schema:name\": \"" + name + "\", \"schema:description\": \"raced\"}";
+    String contentType = method.equals("PATCH") ? "application/merge-patch+json" : "application/json";
+    java.util.concurrent.atomic.AtomicInteger next = new java.util.concurrent.atomic.AtomicInteger();
+    List<String> answers = new ArrayList<>();
+    List<Integer> statuses = concurrentDeleteStatuses(count, () -> {
+      int i = next.getAndIncrement();
+      HttpResponse<String> renamed = request(method, paths.get(i), body, authHeaderAdmin, contentType, etags.get(i));
+      synchronized (answers) {
+        answers.add(renamed.statusCode() + " " + renamed.body());
+      }
+      return renamed.statusCode();
+    });
+
+    Assertions.assertEquals(1, statuses.stream().filter(status -> status == 200).count(), answers::toString);
+    Assertions.assertTrue(statuses.stream().allMatch(status -> status == 200 || status == 409), answers::toString);
+    Assertions.assertTrue(answers.stream().filter(answer -> answer.startsWith("409"))
+        .allMatch(answer -> answer.contains("groupAlreadyPresent")), answers::toString);
+    long stored = JsonMapper.STRICT_MAPPER.readTree(request("GET", "/groups", null, authHeaderAdmin).body())
+        .get("groups").findValuesAsText("schema:name").stream().filter(name::equals).count();
+    Assertions.assertEquals(1, stored, "the race left more than one group of that name");
+  }
+
   @Test
   public void emptyPatchIsRejectedButNonemptyNoOpAndNullRemovalRemainValid() throws Exception {
     String path = "/groups/" + encode(createGroup("Patch Content Group", "remove me"));
@@ -385,6 +524,47 @@ public class GroupsResourceTest {
         authHeaderAdmin);
     Assertions.assertEquals(409, lowered.statusCode(), "a lowercased duplicate should collide: " + lowered.body());
     Assertions.assertTrue(lowered.body().contains("groupAlreadyPresent"), lowered.body());
+  }
+
+  /**
+   * A merge patch that renames a group keeps the lowercased name in step, which the case-insensitive
+   * uniqueness check reads: after the rename, the new name in another case collides and the old one
+   * is free again.
+   */
+  @Test
+  public void aPatchRenameKeepsTheCaseInsensitiveNameInStep() throws Exception {
+    String suffix = UUID.randomUUID().toString();
+    String path = "/groups/" + encode(createGroup("Patch Rename Before " + suffix, "renamed by patch"));
+
+    HttpResponse<String> renamed = request("PATCH", path, "{\"schema:name\": \"Patch Rename After " + suffix + "\"}",
+        authHeaderAdmin, "application/merge-patch+json", "\"1\"");
+    Assertions.assertEquals(200, renamed.statusCode(), renamed.body());
+    Assertions.assertEquals("\"2\"", renamed.headers().firstValue("ETag").orElse(null));
+    Assertions.assertEquals("Patch Rename After " + suffix,
+        JsonMapper.STRICT_MAPPER.readTree(request("GET", path, null, authHeaderAdmin).body()).get("schema:name").asText());
+
+    HttpResponse<String> taken = request("POST", "/groups",
+        "{\"schema:name\": \"patch rename after " + suffix + "\", \"schema:description\": \"lowercased\"}",
+        authHeaderAdmin);
+    Assertions.assertEquals(409, taken.statusCode(), "the renamed group's name in another case: " + taken.body());
+    Assertions.assertTrue(taken.body().contains("groupAlreadyPresent"), taken.body());
+
+    createGroup("PATCH RENAME BEFORE " + suffix, "the old name, free again");
+  }
+
+  /** A patch that changes nothing still honours its precondition: a stale tag is refused, not answered 200. */
+  @Test
+  public void aNoOpPatchWithAStaleTagIsRefused() throws Exception {
+    String path = "/groups/" + encode(createGroup("Stale No-op Patch " + UUID.randomUUID(), "unchanged"));
+    HttpResponse<String> moved = request("PATCH", path, "{\"schema:description\": \"changed\"}",
+        authHeaderAdmin, "application/merge-patch+json", "\"1\"");
+    Assertions.assertEquals(200, moved.statusCode(), moved.body());
+
+    HttpResponse<String> stale = request("PATCH", path, "{\"schema:description\": \"changed\"}",
+        authHeaderAdmin, "application/merge-patch+json", "\"1\"");
+    Assertions.assertEquals(412, stale.statusCode(), stale.body());
+    Assertions.assertEquals("\"2\"",
+        JsonMapper.STRICT_MAPPER.readTree(stale.body()).path("parameters").path("currentETag").asText(), stale.body());
   }
 
   /**

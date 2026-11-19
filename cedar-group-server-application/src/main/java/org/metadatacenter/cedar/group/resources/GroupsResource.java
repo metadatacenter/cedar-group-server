@@ -32,12 +32,15 @@ import org.metadatacenter.rest.assertion.noun.CedarParameter;
 import org.metadatacenter.rest.assertion.noun.CedarRequestBody;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.GroupServiceSession;
+import org.metadatacenter.server.GroupAdministrationRefusedException;
 import org.metadatacenter.server.GroupCallerMembership;
 import org.metadatacenter.server.RevisionConflictException;
 import org.metadatacenter.server.RevisionPrecondition;
 import org.metadatacenter.server.VersionedGroupUsers;
 import org.metadatacenter.server.VersionedResource;
+import org.metadatacenter.server.neo4j.NodeLabel;
 import org.metadatacenter.server.neo4j.cypher.NodeProperty;
+import org.metadatacenter.server.neo4j.util.Neo4JUtil;
 import org.metadatacenter.server.result.BackendCallResult;
 import org.metadatacenter.server.search.permission.SearchPermissionEnqueueService;
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
@@ -45,6 +48,7 @@ import org.metadatacenter.server.security.model.auth.CedarGroupUsersRequest;
 import org.metadatacenter.util.http.CedarUrlUtil;
 import org.metadatacenter.util.http.CedarResponse;
 import org.metadatacenter.util.http.RevisionPreconditionParser;
+import org.neo4j.driver.exceptions.ClientException;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.HttpHeaders;
@@ -69,6 +73,8 @@ import static org.metadatacenter.server.security.model.auth.CedarPermission.*;
 @SecurityRequirement(name = "api_key")
 public class GroupsResource extends AbstractGroupServerResource {
 
+  private static final String UPDATE_REFUSED = "Only the administrators can update the group!";
+  private static final String DELETE_REFUSED = "Only the administrators can delete the group!";
 
   private static SearchPermissionEnqueueService searchPermissionEnqueueService;
 
@@ -151,7 +157,17 @@ public class GroupsResource extends AbstractGroupServerResource {
             .errorKey(CedarErrorKey.GROUP_ALREADY_PRESENT)
     );
 
-    FolderServerGroup newGroup = groupSession.createGroup(groupName.stringValue(), groupDescription.stringValue());
+    FolderServerGroup newGroup;
+    try {
+      newGroup = groupSession.createGroup(groupName.stringValue(), groupDescription.stringValue());
+    } catch (RuntimeException e) {
+      // Two creates of one name can both pass the lookup above. The graph's unique constraint on the
+      // lowercased name refuses the second insert, and that caller is answered as the lookup would have.
+      if (!isGroupNameConstraintViolation(e)) {
+        throw e;
+      }
+      throw groupNameTaken(groupName.stringValue());
+    }
     c.should(newGroup).be(NonNull).otherwiseInternalServerError(
         new CedarErrorPack()
             .message("There was an error while creating the group!")
@@ -279,7 +295,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
-            .message("Only the administrators can update the group!")
+            .message(UPDATE_REFUSED)
             .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
@@ -298,11 +314,20 @@ public class GroupsResource extends AbstractGroupServerResource {
     VersionedResource<FolderServerGroup> updatedGroup;
     try {
       updatedGroup = groupSession.updateGroupById(gid, updateFields, precondition);
+    } catch (GroupAdministrationRefusedException e) {
+      return administrationRefused(id, GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN, UPDATE_REFUSED);
     } catch (RevisionConflictException e) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
           .message("The group has been updated since it was read")
           .build();
+    } catch (RuntimeException e) {
+      // As with a create, two renames to one name can both pass the lookup above, and the graph's
+      // unique constraint refuses the second write.
+      if (!isGroupNameConstraintViolation(e)) {
+        throw e;
+      }
+      throw groupNameTaken(groupName.stringValue());
     }
 
     if (updatedGroup == null) {
@@ -344,6 +369,15 @@ public class GroupsResource extends AbstractGroupServerResource {
           .badRequest();
       throw new CedarBackendException(ar);
     }
+  }
+
+  /**
+   * The graph layer's refusal of a caller who may not administer the group. The handlers check the
+   * same thing first, so this answers only when that check and the write disagree, and it answers as
+   * the handlers' own check does rather than as a group that no longer exists.
+   */
+  private static Response administrationRefused(String id, CedarErrorKey errorKey, String message) {
+    return CedarResponse.forbidden().id(id).errorKey(errorKey).message(message).build();
   }
 
   private static Response groupUpdateTargetDeleted() {
@@ -408,7 +442,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_DELETED_ONLY_BY_GROUP_ADMIN)
-            .message("Only the administrators can delete the group!")
+            .message(DELETE_REFUSED)
             .operation(CedarOperations.delete(FolderServerGroup.class, "id", id))
     );
 
@@ -422,6 +456,8 @@ public class GroupsResource extends AbstractGroupServerResource {
     boolean deleted;
     try {
       deleted = groupSession.deleteGroupById(gid, RevisionPreconditionParser.parse(ifMatch));
+    } catch (GroupAdministrationRefusedException e) {
+      return administrationRefused(id, GROUP_CAN_BY_DELETED_ONLY_BY_GROUP_ADMIN, DELETE_REFUSED);
     } catch (RevisionConflictException e) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
@@ -580,7 +616,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
-            .message("Only the administrators can update the group!")
+            .message(UPDATE_REFUSED)
             .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
@@ -699,7 +735,7 @@ public class GroupsResource extends AbstractGroupServerResource {
     c.should(isAdministrator).be(True).otherwiseForbidden(
         new CedarErrorPack()
             .errorKey(GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN)
-            .message("Only the administrators can update the group!")
+            .message(UPDATE_REFUSED)
             .operation(CedarOperations.update(FolderServerGroup.class, "id", id))
     );
 
@@ -756,11 +792,20 @@ public class GroupsResource extends AbstractGroupServerResource {
     VersionedResource<FolderServerGroup> updatedGroup;
     try {
       updatedGroup = groupSession.updateGroupById(gid, updateFields, precondition);
+    } catch (GroupAdministrationRefusedException e) {
+      return administrationRefused(id, GROUP_CAN_BY_MODIFIED_ONLY_BY_GROUP_ADMIN, UPDATE_REFUSED);
     } catch (RevisionConflictException e) {
       return CedarResponse.status(CedarResponseStatus.PRECONDITION_FAILED)
           .parameter("currentETag", RevisionPreconditionParser.format(e.getCurrentRevision()))
           .message("The group has been updated since it was read")
           .build();
+    } catch (RuntimeException e) {
+      // As with a create, two renames to one name can both pass the lookup above, and the graph's
+      // unique constraint refuses the second write.
+      if (!isGroupNameConstraintViolation(e)) {
+        throw e;
+      }
+      throw groupNameTaken(groupName.stringValue());
     }
 
     if (updatedGroup == null) {
@@ -769,6 +814,28 @@ public class GroupsResource extends AbstractGroupServerResource {
 
     return Response.ok().header(HttpHeaders.ETAG, RevisionPreconditionParser.format(updatedGroup.revision()))
         .entity(updatedGroup.resource()).build();
+  }
+
+  /** The refusal of a create or rename whose name the graph's unique constraint found already taken. */
+  private static CedarBackendException groupNameTaken(String name) {
+    return new CedarBackendException(new CedarAssertionResult(
+        "There is a group with the same name present in the system. Group names must be unique!")
+        .parameter("schema:name", name)
+        .errorKey(CedarErrorKey.GROUP_ALREADY_PRESENT)
+        .conflict());
+  }
+
+  /** Whether the graph refused a write because another group already holds the lowercased name. */
+  private static boolean isGroupNameConstraintViolation(Throwable failure) {
+    for (Throwable cause = failure; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
+      if (cause instanceof ClientException clientException && clientException.code() != null
+          && clientException.code().endsWith("ConstraintValidationFailed") && clientException.getMessage() != null
+          && clientException.getMessage().contains("`" + NodeLabel.SimpleLabel.GROUP + "`")
+          && clientException.getMessage().contains(Neo4JUtil.escapePropertyName(NodeProperty.NAME_LOWER.getValue()))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean theyDiffer(String v1, String v2) {
