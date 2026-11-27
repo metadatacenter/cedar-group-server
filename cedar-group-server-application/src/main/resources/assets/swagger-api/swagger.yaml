@@ -141,7 +141,8 @@ paths:
         required: true
         schema:
           type: string
-      - description: Group identifier.
+      - description: "Group UUID, groups/UUID selector, or full stored IRI encoded\
+          \ as one path segment."
         in: path
         name: id
         required: true
@@ -202,7 +203,8 @@ paths:
         delete must supply in If-Match.
       operationId: findGroup
       parameters:
-      - description: Group identifier.
+      - description: "Group UUID, groups/UUID selector, or full stored IRI encoded\
+          \ as one path segment."
         in: path
         name: id
         required: true
@@ -221,6 +223,12 @@ paths:
               schema:
                 type: string
               style: simple
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Invalid group selector
         "401":
           content:
             application/json:
@@ -265,7 +273,8 @@ paths:
         required: true
         schema:
           type: string
-      - description: Group identifier.
+      - description: "Group UUID, groups/UUID selector, or full stored IRI encoded\
+          \ as one path segment."
         in: path
         name: id
         required: true
@@ -353,7 +362,8 @@ paths:
         required: true
         schema:
           type: string
-      - description: Group identifier.
+      - description: "Group UUID, groups/UUID selector, or full stored IRI encoded\
+          \ as one path segment."
         in: path
         name: id
         required: true
@@ -434,7 +444,9 @@ paths:
         is returned. This response is not a validator for group writes.
       operationId: getCallerMembership
       parameters:
-      - in: path
+      - description: "Group UUID, groups/UUID selector, or full stored IRI encoded\
+          \ as one path segment."
+        in: path
         name: id
         required: true
         schema:
@@ -452,6 +464,12 @@ paths:
               schema:
                 type: string
               style: simple
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Invalid group selector
         "401":
           content:
             application/json:
@@ -490,7 +508,8 @@ paths:
         \ the group's own."
       operationId: getGroupMembers
       parameters:
-      - description: Group identifier.
+      - description: "Group UUID, groups/UUID selector, or full stored IRI encoded\
+          \ as one path segment."
         in: path
         name: id
         required: true
@@ -509,6 +528,12 @@ paths:
               schema:
                 type: string
               style: simple
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Invalid group selector
         "401":
           content:
             application/json:
@@ -552,7 +577,8 @@ paths:
         required: true
         schema:
           type: string
-      - description: Group identifier.
+      - description: "Group UUID, groups/UUID selector, or full stored IRI encoded\
+          \ as one path segment."
         in: path
         name: id
         required: true

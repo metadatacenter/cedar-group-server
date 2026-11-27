@@ -155,6 +155,98 @@ public class GroupsResourceTest {
     }
   }
 
+  @Test
+  public void groupAliasesShareReadsRevisionsAndAuthorization() throws Exception {
+    String id = createGroup("Addressing " + UUID.randomUUID(), "aliases");
+    String uuid = id.substring(id.lastIndexOf('/') + 1);
+    for (String suffix : List.of("", "/users", "/membership/me")) {
+      HttpResponse<String> full = request("GET", "/groups/" + encode(id) + suffix, null, authHeaderAdmin);
+      Assertions.assertEquals(200, full.statusCode(), full.body());
+      for (String alias : List.of(uuid, "groups/" + uuid)) {
+        String path = "/groups/" + encode(alias) + suffix;
+        HttpResponse<String> shortRead = request("GET", path, null, authHeaderAdmin);
+        Assertions.assertEquals(200, shortRead.statusCode(), shortRead.body());
+        Assertions.assertEquals(JsonMapper.STRICT_MAPPER.readTree(full.body()),
+            JsonMapper.STRICT_MAPPER.readTree(shortRead.body()), path);
+        Assertions.assertEquals(full.headers().firstValue("ETag"), shortRead.headers().firstValue("ETag"), path);
+        Assertions.assertEquals(401, request("GET", path, null, null).statusCode(), path);
+      }
+    }
+    Assertions.assertEquals(403, request("GET", "/groups/" + uuid + "/users", null, authHeaderUser1).statusCode());
+    HttpResponse<String> membership = request("GET", "/groups/" + uuid + "/membership/me", null, authHeaderUser1);
+    Assertions.assertEquals(200, membership.statusCode(), membership.body());
+    Assertions.assertEquals(request("GET", "/groups/" + encode(id) + "/membership/me", null, authHeaderUser1).body(),
+        membership.body());
+  }
+
+  @Test
+  public void groupAliasesShareConditionalWritesMembershipAndDeletion() throws Exception {
+    String id = createGroup("Addressed mutations " + UUID.randomUUID(), "aliases");
+    String full = "/groups/" + encode(id);
+    String shortPath = "/groups/" + id.substring(id.lastIndexOf('/') + 1);
+    String typed = "/groups/" + encode("groups/" + id.substring(id.lastIndexOf('/') + 1));
+    HttpResponse<String> before = request("GET", full, null, authHeaderAdmin);
+    String etag = before.headers().firstValue("ETag").orElseThrow();
+    String replacement = "{\"schema:name\":\"Addressed renamed " + UUID.randomUUID()
+        + "\",\"schema:description\":\"updated\"}";
+    Assertions.assertEquals(428, request("PUT", shortPath, replacement, authHeaderAdmin).statusCode());
+    Assertions.assertEquals(403, request("PUT", shortPath, replacement, authHeaderUser1,
+        "application/json", etag).statusCode());
+    HttpResponse<String> updated = request("PUT", shortPath, replacement, authHeaderAdmin, "application/json", etag);
+    Assertions.assertEquals(200, updated.statusCode(), updated.body());
+    Assertions.assertEquals(id, JsonMapper.STRICT_MAPPER.readTree(updated.body()).path("@id").asText());
+    String patch = "{\"schema:description\":\"patched through a typed selector\"}";
+    Assertions.assertEquals(412, request("PATCH", full, patch, authHeaderAdmin,
+        "application/merge-patch+json", etag).statusCode());
+    HttpResponse<String> patched = request("PATCH", typed, patch, authHeaderAdmin,
+        "application/merge-patch+json", updated.headers().firstValue("ETag").orElseThrow());
+    Assertions.assertEquals(200, patched.statusCode(), patched.body());
+    Assertions.assertEquals(JsonMapper.STRICT_MAPPER.readTree(patched.body()),
+        JsonMapper.STRICT_MAPPER.readTree(request("GET", full, null, authHeaderAdmin).body()));
+
+    HttpResponse<String> users = request("GET", full + "/users", null, authHeaderAdmin);
+    String usersEtag = users.headers().firstValue("ETag").orElseThrow();
+    String members = asMembershipRequest(users.body());
+    Assertions.assertEquals(428, request("PUT", shortPath + "/users", members, authHeaderAdmin).statusCode());
+    Assertions.assertEquals(403, request("PUT", shortPath + "/users", members, authHeaderUser1,
+        "application/json", usersEtag).statusCode());
+    HttpResponse<String> replaced = request("PUT", shortPath + "/users", members, authHeaderAdmin,
+        "application/json", usersEtag);
+    Assertions.assertEquals(200, replaced.statusCode(), replaced.body());
+    Assertions.assertEquals(412, request("PUT", full + "/users", members, authHeaderAdmin,
+        "application/json", usersEtag).statusCode());
+    Assertions.assertEquals(1, searchPermissionEvents(id, "GROUP_MEMBERS_UPDATED"));
+
+    Assertions.assertEquals(403, request("DELETE", shortPath, null, authHeaderUser1,
+        "application/json", "*").statusCode());
+    Assertions.assertEquals(412, request("DELETE", shortPath, null, authHeaderAdmin,
+        "application/json", etag).statusCode());
+    String current = request("GET", full, null, authHeaderAdmin).headers().firstValue("ETag").orElseThrow();
+    Assertions.assertEquals(204, request("DELETE", shortPath, null, authHeaderAdmin,
+        "application/json", current).statusCode());
+    Assertions.assertEquals(404, request("GET", full, null, authHeaderAdmin).statusCode());
+    Assertions.assertEquals(1, searchPermissionEvents(id, "GROUP_DELETED"));
+  }
+
+  @Test
+  public void groupPathsRejectWrongKindSelectorsWithoutReinterpretingFullIris() throws Exception {
+    String uuid = UUID.randomUUID().toString();
+    for (String suffix : List.of("", "/users", "/membership/me")) {
+      Assertions.assertEquals(400, request("GET", "/groups/" + encode("categories/" + uuid) + suffix,
+          null, authHeaderAdmin).statusCode());
+    }
+    for (String method : List.of("PUT", "PATCH", "DELETE")) {
+      Assertions.assertEquals(400, request(method, "/groups/" + encode("categories/" + uuid), "{}",
+          authHeaderAdmin, method.equals("PATCH") ? "application/merge-patch+json" : "application/json", "*").statusCode());
+    }
+    Assertions.assertEquals(400, request("PUT", "/groups/" + encode("categories/" + uuid) + "/users",
+        "{}", authHeaderAdmin, "application/json", "*").statusCode());
+    Assertions.assertEquals(404, request("GET", "/groups/" + uuid, null, authHeaderAdmin).statusCode());
+    String id = createGroup("Opaque group " + UUID.randomUUID(), "identity");
+    Assertions.assertEquals(404, request("GET", "/groups/" + encode(id.replace("/groups/", "/categories/")),
+        null, authHeaderAdmin).statusCode());
+  }
+
   /**
    * A membership change appends one GROUP_MEMBERS_UPDATED event, without which search would go on
    * showing the group's shared resources to a removed member. A refused change appends none.
@@ -646,8 +738,10 @@ public class GroupsResourceTest {
     }
     Assertions.assertNotNull(everybodyId, "The Everybody group must exist");
 
-    HttpResponse<String> deleted = request("DELETE", "/groups/" + encode(everybodyId), null, authHeaderAdmin);
-    Assertions.assertEquals(400, deleted.statusCode());
+    for (String alias : List.of(everybodyId, everybodyId.substring(everybodyId.lastIndexOf('/') + 1))) {
+      HttpResponse<String> deleted = request("DELETE", "/groups/" + encode(alias), null, authHeaderAdmin);
+      Assertions.assertEquals(400, deleted.statusCode(), deleted.body());
+    }
   }
 
   @Test

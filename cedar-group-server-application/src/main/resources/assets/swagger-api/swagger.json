@@ -189,7 +189,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "Group identifier.",
+          "description" : "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -282,7 +282,7 @@
         "description" : "Return one group. The ETag it carries is what a later update or delete must supply in If-Match.",
         "operationId" : "findGroup",
         "parameters" : [ {
-          "description" : "Group identifier.",
+          "description" : "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -309,6 +309,16 @@
                 "style" : "simple"
               }
             }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Invalid group selector"
           },
           "401" : {
             "content" : {
@@ -369,7 +379,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "Group identifier.",
+          "description" : "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -497,7 +507,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "Group identifier.",
+          "description" : "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -619,6 +629,7 @@
         "description" : "Return only the authenticated caller's member and administrator relationships. A caller with neither relationship receives two false flags. System permissions do not imply either relationship. No other user's information is returned. This response is not a validator for group writes.",
         "operationId" : "getCallerMembership",
         "parameters" : [ {
+          "description" : "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -645,6 +656,16 @@
                 "style" : "simple"
               }
             }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Invalid group selector"
           },
           "401" : {
             "content" : {
@@ -699,7 +720,7 @@
         "description" : "Return the group's members and its administrators. Restricted to the group's own administrators, because each entry names a member and their email address; belonging to the group does not confer it. The ETag is over the membership, so it is what a membership update must supply, not the group's own.",
         "operationId" : "getGroupMembers",
         "parameters" : [ {
-          "description" : "Group identifier.",
+          "description" : "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -726,6 +747,16 @@
                 "style" : "simple"
               }
             }
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Invalid group selector"
           },
           "401" : {
             "content" : {
@@ -786,7 +817,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "Group identifier.",
+          "description" : "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.",
           "in" : "path",
           "name" : "id",
           "required" : true,

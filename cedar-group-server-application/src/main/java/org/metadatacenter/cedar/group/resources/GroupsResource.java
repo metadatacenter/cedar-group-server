@@ -18,6 +18,7 @@ import io.dropwizard.jersey.PATCH;
 import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.config.CedarConfig;
+import org.metadatacenter.model.CedarResourceType;
 import org.metadatacenter.error.CedarAssertionResult;
 import org.metadatacenter.error.CedarErrorKey;
 import org.metadatacenter.error.CedarErrorPack;
@@ -190,17 +191,19 @@ public class GroupsResource extends AbstractGroupServerResource {
       @ApiResponse(responseCode = "200", description = "The group",
           content = @Content(schema = @Schema(ref = "#/components/schemas/Group")),
           headers = @Header(name = "ETag", description = "Strong validator for the group's current revision.", schema = @Schema(type = "string"))),
+      @ApiResponse(responseCode = "400", description = "Invalid group selector", content = @Content(schema = @Schema(implementation = CedarError.class))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the group read permission"),
       @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No such group"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response findGroup(
-      @Parameter(description = "Group identifier.", required = true)
+      @Parameter(description = "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.", required = true)
       @PathParam(PP_ID) String id) throws CedarException {
     CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
+    id = linkedDataUtil.resolveResourceId(CedarResourceType.GROUP, id);
     c.must(c.user()).have(GROUP_READ);
 
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
@@ -248,11 +251,12 @@ public class GroupsResource extends AbstractGroupServerResource {
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response updateGroup(
-      @Parameter(description = "Group identifier.", required = true)
+      @Parameter(description = "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.", required = true)
       @PathParam(PP_ID) String id) throws CedarException {
     CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
+    id = linkedDataUtil.resolveResourceId(CedarResourceType.GROUP, id);
     c.must(c.user()).have(GROUP_UPDATE);
 
     CedarRequestBody requestBody = c.request().getRequestBody()
@@ -406,11 +410,12 @@ public class GroupsResource extends AbstractGroupServerResource {
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response deleteGroup(
-      @Parameter(description = "Group identifier.", required = true)
+      @Parameter(description = "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.", required = true)
       @PathParam(PP_ID) String id) throws CedarException {
     CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
+    id = linkedDataUtil.resolveResourceId(CedarResourceType.GROUP, id);
     c.must(c.user()).have(GROUP_DELETE);
 
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
@@ -486,14 +491,18 @@ public class GroupsResource extends AbstractGroupServerResource {
       @ApiResponse(responseCode = "200", description = "The caller's own relationships",
           content = @Content(schema = @Schema(ref = "#/components/schemas/GroupCallerMembership")),
           headers = @Header(name = "Cache-Control", description = "private, no-store", schema = @Schema(type = "string"))),
+      @ApiResponse(responseCode = "400", description = "Invalid group selector", content = @Content(schema = @Schema(implementation = CedarError.class))),
       @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content(schema = @Schema(implementation = CedarError.class))),
       @ApiResponse(responseCode = "403", description = "The caller lacks the group read permission", content = @Content(schema = @Schema(implementation = CedarError.class))),
       @ApiResponse(responseCode = "404", description = "No such group", content = @Content(schema = @Schema(implementation = CedarError.class))),
       @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = CedarError.class)))
   })
-  public Response getCallerMembership(@PathParam(PP_ID) String id) throws CedarException {
+  public Response getCallerMembership(
+      @Parameter(description = "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.", required = true)
+      @PathParam(PP_ID) String id) throws CedarException {
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);
+    id = linkedDataUtil.resolveResourceId(CedarResourceType.GROUP, id);
     c.must(c.user()).have(GROUP_READ);
     GroupCallerMembership membership = dataServices.getGroupServiceSession(c)
         .findCallerMembership(CedarGroupId.build(id));
@@ -516,17 +525,19 @@ public class GroupsResource extends AbstractGroupServerResource {
           content = @Content(schema = @Schema(implementation = CedarGroupUsers.class)),
           headers = @Header(name = "ETag", description = "\"Strong validator for the membership's current revision.\"",
               schema = @Schema(type = "string"))),
+      @ApiResponse(responseCode = "400", description = "Invalid group selector", content = @Content(schema = @Schema(implementation = CedarError.class))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller does not administer this group"),
       @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No such group"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getGroupMembers(
-      @Parameter(description = "Group identifier.", required = true)
+      @Parameter(description = "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.", required = true)
       @PathParam(PP_ID) String id) throws CedarException {
     CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
+    id = linkedDataUtil.resolveResourceId(CedarResourceType.GROUP, id);
     c.must(c.user()).have(GROUP_READ);
 
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
@@ -593,11 +604,12 @@ public class GroupsResource extends AbstractGroupServerResource {
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response updateGroupMembers(
-      @Parameter(description = "Group identifier.", required = true)
+      @Parameter(description = "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.", required = true)
       @PathParam(PP_ID) String id) throws CedarException {
     CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
+    id = linkedDataUtil.resolveResourceId(CedarResourceType.GROUP, id);
     c.must(c.user()).have(GROUP_UPDATE);
 
     GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
@@ -682,11 +694,12 @@ public class GroupsResource extends AbstractGroupServerResource {
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response patchGroup(
-      @Parameter(description = "Group identifier.", required = true)
+      @Parameter(description = "Group UUID, groups/UUID selector, or full stored IRI encoded as one path segment.", required = true)
       @PathParam(PP_ID) String id) throws CedarException {
     CedarRequestContext c = buildRequestContext();
 
     c.must(c.user()).be(LoggedIn);
+    id = linkedDataUtil.resolveResourceId(CedarResourceType.GROUP, id);
     c.must(c.user()).have(GROUP_UPDATE);
 
     //c.must(c.request()).be(GenericAssertions.jsonBody);
